@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Constants} from "../../lib/Constants.sol";
 
@@ -42,8 +42,12 @@ contract SignedPriceOracle is Initializable, AccessControlUpgradeable, UUPSUpgra
         signer = _signer; emit SignerSet(_signer);
     }
 
-    function setMaxStale(uint64 _max) external onlyRole(Constants.DEFAULT_ADMIN) {
-        maxStale = _max; emit MaxStaleSet(_max);
+    function setMaxStale(uint256 _max) external onlyRole(Constants.PRICE_KEEPER) {
+        maxStale = uint64(_max); emit MaxStaleSet(uint64(_max));
+    }
+
+    function getMaxStale() external view returns (uint256) {
+        return maxStale;
     }
 
     // Test helper / keeper path

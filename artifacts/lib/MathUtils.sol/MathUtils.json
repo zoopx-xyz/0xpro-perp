@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "MathUtils",
+  "sourceName": "lib/MathUtils.sol",
+  "abi": [],
+  "bytecode": "0x60808060405234601757603a9081601d823930815050f35b600080fdfe600080fdfea26469706673582212203d5658e0bc7abba4dd6eb7a1e6cfdcc5ed91cea06832ce2df30b8d7d9204bd4664736f6c63430008180033",
+  "deployedBytecode": "0x600080fdfea26469706673582212203d5658e0bc7abba4dd6eb7a1e6cfdcc5ed91cea06832ce2df30b8d7d9204bd4664736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

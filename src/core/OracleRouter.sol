@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IOracleRouter} from "./interfaces/IOracleRouter.sol";
 import {SignedPriceOracle} from "./SignedPriceOracle.sol";
 import {Constants} from "../../lib/Constants.sol";
@@ -34,6 +34,13 @@ contract OracleRouter is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     function getPriceInZUSD(address asset) external view override returns (uint256 priceX1e18, bool isStale) {
+        address o = adapters[asset].oracle;
+        require(o != address(0), "no adapter");
+        (uint256 px, uint64 ts, bool stale) = SignedPriceOracle(o).getPrice(asset);
+        return (px, stale);
+    }
+
+    function getPriceAndStale(address asset) external view returns (uint256 priceX1e18, bool isStale) {
         address o = adapters[asset].oracle;
         require(o != address(0), "no adapter");
         (uint256 px, uint64 ts, bool stale) = SignedPriceOracle(o).getPrice(asset);

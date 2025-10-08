@@ -15,4 +15,10 @@ interface IPerpEngine {
     }
 
     function recordFill(Fill calldata f) external;
+
+    function getUnrealizedPnlZ(address account) external view returns (int256);
+
+    function getPosition(address account, bytes32 marketId) external view returns (int256);
+
+    function computeAccountMMRZ(address account) external view returns (uint256);
 }

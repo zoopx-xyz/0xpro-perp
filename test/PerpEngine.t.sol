@@ -30,16 +30,17 @@ contract PerpEngineTest is Test {
         cm.initialize(address(this), address(orac));
         orac.initialize(address(this));
         spo.initialize(address(this), address(0), 300);
-        vault.initialize(address(this), address(cm));
-        engine.initialize(address(this), address(vault));
+    vault.initialize(address(this), address(cm));
+    engine.initialize(address(this), address(vault));
 
         z = new MockERC20("mockzUSD", "mzUSD", 6);
         orac.registerAdapter(address(z), address(spo));
         cm.setAssetConfig(address(z), true, 10000, address(orac), 6);
         spo.setPrice(address(z), 1e18, uint64(block.timestamp));
 
-        // grant engine role to self for vault hooks tests (MVP simplification)
-        // In production, vault would grant ENGINE to PerpEngine only
+    // wire
+    engine.setDeps(address(0), address(orac), address(cm), address(0), address(0), address(z));
+    engine.registerMarket(MARKET, address(z), 6);
     }
 
     function _deployProxy(address impl) internal returns (address) {

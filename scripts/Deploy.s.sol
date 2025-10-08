@@ -17,6 +17,7 @@ import {FundingModule} from "../src/core/FundingModule.sol";
 import {TreasurySpoke} from "../src/core/TreasurySpoke.sol";
 import {FeeSplitterSpoke} from "../src/core/FeeSplitterSpoke.sol";
 import {MarketFactory} from "../src/core/MarketFactory.sol";
+import {IPerpEngine} from "../src/core/interfaces/IPerpEngine.sol";
 
 contract Deploy is Script {
     address public admin;
@@ -26,7 +27,7 @@ contract Deploy is Script {
         admin = msg.sender;
 
         // Deploy tokens
-        MockzUSD z = new MockzUSD();
+    MockzUSD z = new MockzUSD();
         // 12 mocks
         MockERC20 mockETH = new MockERC20("mockETH", "mETH", 18);
         MockERC20 mockWETH = new MockERC20("mockWETH", "mWETH", 18);
@@ -77,7 +78,11 @@ contract Deploy is Script {
         fs.initialize(admin);
         mf.initialize(admin);
 
-        // Register adapters
+    // Wire dependencies
+    pe.setDeps(address(rc), address(orac), address(cm), address(ts), address(fs), address(z));
+    mv.setDeps(address(rc), address(orac), address(pe));
+
+    // Register adapters
         orac.registerAdapter(address(mockETH), address(spo));
         orac.registerAdapter(address(mockWETH), address(spo));
         orac.registerAdapter(address(mockBTC), address(spo));
@@ -105,7 +110,7 @@ contract Deploy is Script {
         cm.setAssetConfig(address(mockPYUSD), true, 10000, address(orac), 6);
         cm.setAssetConfig(address(mockUSD1), true, 10000, address(orac), 18);
 
-        // Seed prices (example values, in 1e18)
+    // Seed prices (example values, in 1e18)
         spo.setPrice(address(mockETH), 2000e18, uint64(block.timestamp));
         spo.setPrice(address(mockWETH), 2000e18, uint64(block.timestamp));
         spo.setPrice(address(mockBTC), 60000e18, uint64(block.timestamp));
@@ -118,6 +123,39 @@ contract Deploy is Script {
         spo.setPrice(address(mockUSDT), 1e18, uint64(block.timestamp));
         spo.setPrice(address(mockPYUSD), 1e18, uint64(block.timestamp));
         spo.setPrice(address(mockUSD1), 1e18, uint64(block.timestamp));
+
+        // Mint tokens to admin
+        uint256 big = 1_000_000 * 1e18;
+        mockETH.mint(admin, big);
+        mockWETH.mint(admin, big);
+        mockBTC.mint(admin, 1_000_000 * 1e8);
+        mockWBTC.mint(admin, 1_000_000 * 1e8);
+        mockSOL.mint(admin, 1_000_000 * 1e9);
+        mockKDA.mint(admin, 1_000_000 * 1e12);
+        mockPOL.mint(admin, big);
+        mockZPX.mint(admin, big);
+        mockUSDC.mint(admin, 1_000_000 * 1e6);
+        mockUSDT.mint(admin, 1_000_000 * 1e6);
+        mockPYUSD.mint(admin, 1_000_000 * 1e6);
+        mockUSD1.mint(admin, big);
+        z.mint(admin, 1_000_000 * 1e6);
+
+        // Example market risk setup
+        RiskConfig.MarketRisk memory risk = RiskConfig.MarketRisk({
+            imrBps: 10000, // 100% init margin (placeholder)
+            mmrBps: 6250,  // 62.5%
+            liqPenaltyBps: 500, // 5%
+            makerFeeBps: 5,
+            takerFeeBps: 7,
+            maxLev: 10
+        });
+        bytes32 BTC_PERP = keccak256("BTC-PERP");
+        rc.setMarketRisk(BTC_PERP, risk);
+        // Register market on engine (base asset + decimals)
+        pe.registerMarket(BTC_PERP, address(mockBTC), 8);
+
+        // Grant ENGINE role on Vault to PerpEngine
+        mv.grantRole(keccak256("ENGINE"), address(pe));
 
         vm.stopBroadcast();
     }

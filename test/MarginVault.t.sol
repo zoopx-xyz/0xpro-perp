@@ -48,4 +48,11 @@ contract MarginVaultTest is Test {
     vault.withdraw(address(usdc), 200_000, false, bytes32(0)); // 0.2 USDC
     assertEq(usdc.balanceOf(address(this)), (1_000_000 * 1e6) - 300_000);
     }
+
+    function testAccountEquityZUSD() public {
+        vault.deposit(address(usdc), 1_000_000, false, bytes32(0)); // 1 USDC
+        int256 eq = vault.accountEquityZUSD(address(this));
+        // 1 USDC at $1, 6 decimals => 1e18
+        assertEq(eq, int256(1e18));
+    }
 }

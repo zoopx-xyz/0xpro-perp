@@ -1,0 +1,40 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IFeeSplitterSpoke",
+  "sourceName": "src/core/interfaces/IFeeSplitterSpoke.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "feeZ",
+          "type": "uint256"
+        }
+      ],
+      "name": "splitFees",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "toTreasury",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "toInsurance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "toReferral",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

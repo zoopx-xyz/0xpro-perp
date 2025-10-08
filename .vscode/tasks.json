@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "forge-smoke-5920",
+			"type": "shell",
+			"command": "forge script scripts/Smoke.s.sol:Smoke --rpc-url ${input:rpc5920} --broadcast --via-ir --sig run() --slow --legacy",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			]
+		}
+	]
+}
