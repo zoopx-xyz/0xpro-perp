@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Initializable} from "@openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {Constants} from "../../lib/Constants.sol";
+
+/// @title SignedPriceOracle
+/// @notice MVP oracle supports keeper-set prices and optional ECDSA signatures
+contract SignedPriceOracle is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    using ECDSA for bytes32;
+
+    struct Price { uint256 priceX1e18; uint64 ts; }
+
+    mapping(address => Price) public prices;
+    address public signer;
+    uint64 public maxStale;
+
+    event PriceUpdated(address indexed asset, uint256 priceX1e18, uint64 ts, address indexed updater);
+    event SignerSet(address indexed signer);
+    event MaxStaleSet(uint64 maxStale);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() { _disableInitializers(); }
+
+    function initialize(address admin, address _signer, uint64 _maxStale) external initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+        _grantRole(Constants.DEFAULT_ADMIN, admin);
+        _grantRole(Constants.PRICE_KEEPER, admin);
+        signer = _signer;
+        maxStale = _maxStale == 0 ? Constants.DEFAULT_MAX_STALE : _maxStale;
+        emit SignerSet(_signer);
+        emit MaxStaleSet(maxStale);
+    }
+
+    function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}
+
+    function setSigner(address _signer) external onlyRole(Constants.DEFAULT_ADMIN) {
+        signer = _signer; emit SignerSet(_signer);
+    }
+
+    function setMaxStale(uint64 _max) external onlyRole(Constants.DEFAULT_ADMIN) {
+        maxStale = _max; emit MaxStaleSet(_max);
+    }
+
+    // Test helper / keeper path
+    function setPrice(address asset, uint256 priceX1e18, uint64 ts) external onlyRole(Constants.PRICE_KEEPER) {
+        prices[asset] = Price(priceX1e18, ts);
+        emit PriceUpdated(asset, priceX1e18, ts, msg.sender);
+    }
+
+    function setPriceSigned(address asset, uint256 priceX1e18, uint64 ts, bytes calldata signature) external {
+        bytes32 digest = keccak256(abi.encode(asset, priceX1e18, ts, address(this))).toEthSignedMessageHash();
+        address recovered = ECDSA.recover(digest, signature);
+        require(recovered == signer, "bad sig");
+        prices[asset] = Price(priceX1e18, ts);
+        emit PriceUpdated(asset, priceX1e18, ts, msg.sender);
+    }
+
+    function getPrice(address asset) external view returns (uint256 priceX1e18, uint64 ts, bool isStale) {
+        Price memory p = prices[asset];
+        priceX1e18 = p.priceX1e18; ts = p.ts;
+        isStale = (p.ts == 0) || (block.timestamp - p.ts > maxStale);
+    }
+
+    uint256[50] private __gap;
+}

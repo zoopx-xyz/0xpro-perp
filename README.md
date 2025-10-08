@@ -1,66 +1,37 @@
-## Foundry
+## Perp MVP (Kadena EVM Testnet)
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Contracts and tests for a Perp-only Hub+Spoke MVP targeting Kadena EVM testnet.
 
-Foundry consists of:
+Key features:
+- UUPS upgradeable modules (Vault, Engine, Oracles, Risk, Funding, Treasury)
+- Multi-asset CollateralManager with LTV haircuts and 1e18 zUSD accounting
+- PerpEngine idempotent recordFill with canonical events
+- SignedPriceOracle with keeper-set for tests and ECDSA support
+- Mock tokens including settlement `mockzUSD` (6 decimals, ERC20Permit)
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Requirements
+- Foundry installed
 
-## Documentation
+## Build & Test
 
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```sh
+forge build
+forge test
 ```
 
-### Test
+## Deploy (MVP)
 
-```shell
-$ forge test
+```sh
+forge script scripts/Deploy.s.sol --broadcast --rpc-url <Kadena RPC>
 ```
 
-### Format
+## Defaults
+- Prices normalized to 1e18 zUSD
+- Default LTVs: 50% non-stable, 100% stable
+- Default oracle maxStale = 300s
+- Maker fee = 5 bps, Taker fee = 7 bps (configurable in RiskConfig)
 
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+## TODO
+- Implement full equity math in MarginVaultV2 (cross + isolated + PnL via engine)
+- Wire FeeSplitter/Treasury flows and MarketFactory registration
+- Expand tests for liquidation flows and staleness handling
