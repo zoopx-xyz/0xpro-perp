@@ -10,6 +10,8 @@ import {Constants} from "../../lib/Constants.sol";
 contract TreasurySpoke is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
+    address public zUsdToken;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
 
@@ -18,6 +20,10 @@ contract TreasurySpoke is Initializable, AccessControlUpgradeable, UUPSUpgradeab
         __UUPSUpgradeable_init();
         _grantRole(Constants.DEFAULT_ADMIN, admin);
         _grantRole(Constants.TREASURER, admin);
+    }
+
+    function setZUsdToken(address _zUsdToken) external onlyRole(Constants.DEFAULT_ADMIN) {
+        zUsdToken = _zUsdToken;
     }
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}
@@ -34,6 +40,26 @@ contract TreasurySpoke is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     function sweepToHub(address token, uint256 amount, address to) external onlyRole(Constants.TREASURER) {
         IERC20(token).safeTransfer(to, amount);
     }
+
+    function forwardFeesToSplitter(uint256 amount, address splitter) external onlyRole(Constants.FORWARDER_ROLE) {
+        require(splitter != address(0), "invalid splitter");
+        require(amount > 0, "invalid amount");
+        require(zUsdToken != address(0), "zUSD not set");
+        
+        // Transfer zUSD to the fee splitter
+        IERC20(zUsdToken).safeTransfer(splitter, amount);
+        emit FeesForwarded(amount, splitter);
+    }
+
+    function receivePenalty(uint256 amount) external {
+        // For MVP, funds should be transferred by caller before or after
+        // This function signals penalty receipt
+        require(amount > 0, "invalid amount");
+        emit PenaltyReceived(amount);
+    }
+
+    event FeesForwarded(uint256 amount, address indexed splitter);
+    event PenaltyReceived(uint256 amount);
 
     function receivePenalty(address token, uint256 amount) external {
         // For MVP, funds should be transferred by caller before or after; this function can be used to signal receipt

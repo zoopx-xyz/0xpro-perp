@@ -151,8 +151,9 @@ contract PerpEngine is Initializable, AccessControlUpgradeable, UUPSUpgradeable,
             vault.reserve(f.account, address(zUsd), tokenAmt, false, bytes32(0));
         }
 
-        // Split fees (treasury already funded)
-        if (address(feeSplitter) != address(0)) {
+        // Forward fees from treasury to splitter and split
+        if (address(treasury) != address(0) && address(feeSplitter) != address(0) && f.feeZ > 0) {
+            treasury.forwardFeesToSplitter(uint256(f.feeZ), address(feeSplitter));
             feeSplitter.splitFees(uint256(f.feeZ));
         }
 

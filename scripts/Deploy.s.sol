@@ -81,6 +81,13 @@ contract Deploy is Script {
     // Wire dependencies
     pe.setDeps(address(rc), address(orac), address(cm), address(ts), address(fs), address(z));
     mv.setDeps(address(rc), address(orac), address(pe));
+    
+    // Configure zUSD token for treasury and fee splitter
+    ts.setZUsdToken(address(z));
+    fs.setZUsdToken(address(z));
+    
+    // Set fee splitter recipients (using admin as placeholder)
+    fs.setRecipients(admin, admin, admin, admin);
 
     // Register adapters
         orac.registerAdapter(address(mockETH), address(spo));
@@ -156,6 +163,9 @@ contract Deploy is Script {
 
         // Grant ENGINE role on Vault to PerpEngine
         mv.grantRole(keccak256("ENGINE"), address(pe));
+        
+        // Grant FORWARDER_ROLE on Treasury to PerpEngine
+        ts.grantRole(keccak256("FORWARDER_ROLE"), address(pe));
 
         vm.stopBroadcast();
     }

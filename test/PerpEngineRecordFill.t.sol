@@ -62,6 +62,13 @@ contract PerpEngineRecordFillTest is Test {
     engine.setDeps(address(risk), address(orac), address(cm), address(ts), address(fs), address(z));
     vault.setDeps(address(risk), address(orac), address(engine));
     vault.grantRole(keccak256("ENGINE"), address(engine));
+    ts.grantRole(keccak256("FORWARDER_ROLE"), address(engine)); // Grant FORWARDER_ROLE
+    
+    // Configure treasury and fee splitter
+    ts.setZUsdToken(address(z));
+    fs.setZUsdToken(address(z));
+    fs.setRecipients(address(this), address(this), address(this), address(this));
+    
     // setup market
     engine.registerMarket(MARKET, address(z), 6); // using z as base for simplicity in test
 
