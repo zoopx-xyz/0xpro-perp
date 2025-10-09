@@ -71,7 +71,15 @@ contract InvariantsTest is Test {
         fundingModule.initialize(admin);
 
         // Dependencies
-        engine.setDeps(address(riskConfig), address(oracleRouter), address(cm), address(0), address(0), address(fundingModule), address(zUsd));
+        engine.setDeps(
+            address(riskConfig),
+            address(oracleRouter),
+            address(cm),
+            address(0),
+            address(0),
+            address(fundingModule),
+            address(zUsd)
+        );
         vault.setDeps(address(riskConfig), address(oracleRouter), address(engine));
 
         // Markets & oracle
@@ -183,12 +191,22 @@ contract InvariantsTest is Test {
         // Also ensure there is no market with non-zero position missing from list (check two known markets)
         if (engine.getPosition(user, BTC_PERP) != 0) {
             bool found;
-            for (uint256 k = 0; k < ms.length; k++) if (ms[k] == BTC_PERP) { found = true; break; }
+            for (uint256 k = 0; k < ms.length; k++) {
+                if (ms[k] == BTC_PERP) {
+                    found = true;
+                    break;
+                }
+            }
             assertTrue(found, "BTC missing from open markets");
         }
         if (engine.getPosition(user, ETH_PERP) != 0) {
             bool found2;
-            for (uint256 k2 = 0; k2 < ms.length; k2++) if (ms[k2] == ETH_PERP) { found2 = true; break; }
+            for (uint256 k2 = 0; k2 < ms.length; k2++) {
+                if (ms[k2] == ETH_PERP) {
+                    found2 = true;
+                    break;
+                }
+            }
             assertTrue(found2, "ETH missing from open markets");
         }
     }

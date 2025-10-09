@@ -79,7 +79,15 @@ contract PruneZeroPositionsTest is Test {
         fundingModule.initialize(admin);
 
         // Wire dependencies
-        perpEngine.setDeps(address(riskConfig), address(oracleRouter), address(cm), address(treasury), address(feeSplitter), address(fundingModule), address(zUsd));
+        perpEngine.setDeps(
+            address(riskConfig),
+            address(oracleRouter),
+            address(cm),
+            address(treasury),
+            address(feeSplitter),
+            address(fundingModule),
+            address(zUsd)
+        );
         vault.setDeps(address(riskConfig), address(oracleRouter), address(perpEngine));
 
         // Configure oracle and markets
@@ -101,7 +109,7 @@ contract PruneZeroPositionsTest is Test {
         // Setup markets
         RiskConfig.MarketRisk memory risk = RiskConfig.MarketRisk({
             imrBps: 1000, // 10%
-            mmrBps: 500,  // 5%
+            mmrBps: 500, // 5%
             liqPenaltyBps: 100, // 1%
             makerFeeBps: 5,
             takerFeeBps: 10,
@@ -122,11 +130,11 @@ contract PruneZeroPositionsTest is Test {
         zUsd.mint(user, 100_000 * 1e6);
         zUsd.mint(address(perpEngine), 100_000 * 1e6);
 
-    // User deposits minimal zUSD to vault for margin (just above combined IMR requirements ~12k) to allow liquidations post adverse move
-    vm.startPrank(user);
-    zUsd.approve(address(vault), type(uint256).max);
-    vault.deposit(address(zUsd), 15_000 * 1e6, false, bytes32(0));
-    vm.stopPrank();
+        // User deposits minimal zUSD to vault for margin (just above combined IMR requirements ~12k) to allow liquidations post adverse move
+        vm.startPrank(user);
+        zUsd.approve(address(vault), type(uint256).max);
+        vault.deposit(address(zUsd), 15_000 * 1e6, false, bytes32(0));
+        vm.stopPrank();
 
         vm.stopPrank();
     }
@@ -152,7 +160,7 @@ contract PruneZeroPositionsTest is Test {
         // Should have 2 open markets
         openMarkets = perpEngine.getOpenMarketsForAccount(user);
         assertEq(openMarkets.length, 2);
-        
+
         // Check both markets are present
         bool btcFound = false;
         bool ethFound = false;
@@ -167,7 +175,7 @@ contract PruneZeroPositionsTest is Test {
         // Open two positions
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 30_000 * 1e6, 2);
-        
+
         vm.prank(user);
         perpEngine.openPosition(ETH_PERP, true, 20_000 * 1e6, 3);
 
@@ -201,7 +209,7 @@ contract PruneZeroPositionsTest is Test {
         // Open positions
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 30_000 * 1e6, 2);
-        
+
         vm.prank(user);
         perpEngine.openPosition(ETH_PERP, true, 20_000 * 1e6, 3);
 
@@ -287,7 +295,7 @@ contract PruneZeroPositionsTest is Test {
         // Open 3 positions
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 25_000 * 1e6, 2);
-        
+
         vm.prank(user);
         perpEngine.openPosition(ETH_PERP, true, 25_000 * 1e6, 2);
 

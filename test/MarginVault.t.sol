@@ -31,22 +31,26 @@ contract MarginVaultTest is Test {
         cm.setAssetConfig(address(usdc), true, 10000, address(orac), 6);
         spo.setPrice(address(usdc), 1e18, uint64(block.timestamp));
 
-    usdc.mint(address(this), 1_000_000 * 1e6);
+        usdc.mint(address(this), 1_000_000 * 1e6);
         usdc.approve(address(vault), type(uint256).max);
     }
 
     function _deployProxy(address impl) internal returns (address) {
-        bytes memory code = abi.encodePacked(hex"3d602d80600a3d3981f3", hex"363d3d373d3d3d363d73", bytes20(impl), hex"5af43d82803e903d91602b57fd5bf3");
+        bytes memory code = abi.encodePacked(
+            hex"3d602d80600a3d3981f3", hex"363d3d373d3d3d363d73", bytes20(impl), hex"5af43d82803e903d91602b57fd5bf3"
+        );
         address proxy;
-        assembly { proxy := create(0, add(code, 0x20), mload(code)) }
+        assembly {
+            proxy := create(0, add(code, 0x20), mload(code))
+        }
         require(proxy != address(0), "proxy fail");
         return proxy;
     }
 
     function testDepositWithdraw() public {
-    vault.deposit(address(usdc), 500_000, false, bytes32(0)); // 0.5 USDC
-    vault.withdraw(address(usdc), 200_000, false, bytes32(0)); // 0.2 USDC
-    assertEq(usdc.balanceOf(address(this)), (1_000_000 * 1e6) - 300_000);
+        vault.deposit(address(usdc), 500_000, false, bytes32(0)); // 0.5 USDC
+        vault.withdraw(address(usdc), 200_000, false, bytes32(0)); // 0.2 USDC
+        assertEq(usdc.balanceOf(address(this)), (1_000_000 * 1e6) - 300_000);
     }
 
     function testAccountEquityZUSD() public {

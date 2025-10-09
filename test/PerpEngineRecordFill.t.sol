@@ -41,7 +41,7 @@ contract PerpEngineRecordFillTest is Test {
         orac.initialize(address(this));
         spo.initialize(address(this), address(0), 300);
         vault.initialize(address(this), address(cm));
-    engine.initialize(address(this), address(vault));
+        engine.initialize(address(this), address(vault));
         risk.initialize(address(this));
         fs.initialize(address(this));
         ts.initialize(address(this));
@@ -53,24 +53,24 @@ contract PerpEngineRecordFillTest is Test {
         // direct storage for simplicity not shown; we'll call as admin
         vm.stopPrank();
 
-    z = new MockERC20("mockzUSD", "mzUSD", 6);
+        z = new MockERC20("mockzUSD", "mzUSD", 6);
         orac.registerAdapter(address(z), address(spo));
         cm.setAssetConfig(address(z), true, 10000, address(orac), 6);
         spo.setPrice(address(z), 1e18, uint64(block.timestamp));
 
-    // wire deps
-    engine.setDeps(address(risk), address(orac), address(cm), address(ts), address(fs), address(0), address(z));
-    vault.setDeps(address(risk), address(orac), address(engine));
-    vault.grantRole(keccak256("ENGINE"), address(engine));
-    ts.grantRole(keccak256("FORWARDER_ROLE"), address(engine)); // Grant FORWARDER_ROLE
-    
-    // Configure treasury and fee splitter
-    ts.setZUsdToken(address(z));
-    fs.setZUsdToken(address(z));
-    fs.setRecipients(address(this), address(this), address(this), address(this));
-    
-    // setup market
-    engine.registerMarket(MARKET, address(z), 6); // using z as base for simplicity in test
+        // wire deps
+        engine.setDeps(address(risk), address(orac), address(cm), address(ts), address(fs), address(0), address(z));
+        vault.setDeps(address(risk), address(orac), address(engine));
+        vault.grantRole(keccak256("ENGINE"), address(engine));
+        ts.grantRole(keccak256("FORWARDER_ROLE"), address(engine)); // Grant FORWARDER_ROLE
+
+        // Configure treasury and fee splitter
+        ts.setZUsdToken(address(z));
+        fs.setZUsdToken(address(z));
+        fs.setRecipients(address(this), address(this), address(this), address(this));
+
+        // setup market
+        engine.registerMarket(MARKET, address(z), 6); // using z as base for simplicity in test
 
         // Pre-fund treasury with fees
         z.mint(address(this), 1_000_000 * 1e6);
@@ -78,9 +78,13 @@ contract PerpEngineRecordFillTest is Test {
     }
 
     function _proxy(address impl) internal returns (address) {
-        bytes memory code = abi.encodePacked(hex"3d602d80600a3d3981f3", hex"363d3d373d3d3d363d73", bytes20(impl), hex"5af43d82803e903d91602b57fd5bf3");
+        bytes memory code = abi.encodePacked(
+            hex"3d602d80600a3d3981f3", hex"363d3d373d3d3d363d73", bytes20(impl), hex"5af43d82803e903d91602b57fd5bf3"
+        );
         address proxy;
-        assembly { proxy := create(0, add(code, 0x20), mload(code)) }
+        assembly {
+            proxy := create(0, add(code, 0x20), mload(code))
+        }
         require(proxy != address(0), "proxy fail");
         return proxy;
     }
@@ -95,7 +99,8 @@ contract PerpEngineRecordFillTest is Test {
             priceZ: 1e18,
             feeZ: 1_000_000, // 1 zUSD (6 decimals internal)
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("fillX")
         });
 
         engine.recordFill(f);

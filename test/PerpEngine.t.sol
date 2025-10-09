@@ -30,29 +30,33 @@ contract PerpEngineTest is Test {
         cm.initialize(address(this), address(orac));
         orac.initialize(address(this));
         spo.initialize(address(this), address(0), 300);
-    vault.initialize(address(this), address(cm));
-    engine.initialize(address(this), address(vault));
+        vault.initialize(address(this), address(cm));
+        engine.initialize(address(this), address(vault));
 
         z = new MockERC20("mockzUSD", "mzUSD", 6);
         orac.registerAdapter(address(z), address(spo));
         cm.setAssetConfig(address(z), true, 10000, address(orac), 6);
         spo.setPrice(address(z), 1e18, uint64(block.timestamp));
 
-    // wire
-    engine.setDeps(address(0), address(orac), address(cm), address(0), address(0), address(0), address(z));
-    engine.registerMarket(MARKET, address(z), 6);
+        // wire
+        engine.setDeps(address(0), address(orac), address(cm), address(0), address(0), address(0), address(z));
+        engine.registerMarket(MARKET, address(z), 6);
     }
 
     function _deployProxy(address impl) internal returns (address) {
-        bytes memory code = abi.encodePacked(hex"3d602d80600a3d3981f3", hex"363d3d373d3d3d363d73", bytes20(impl), hex"5af43d82803e903d91602b57fd5bf3");
+        bytes memory code = abi.encodePacked(
+            hex"3d602d80600a3d3981f3", hex"363d3d373d3d3d363d73", bytes20(impl), hex"5af43d82803e903d91602b57fd5bf3"
+        );
         address proxy;
-        assembly { proxy := create(0, add(code, 0x20), mload(code)) }
+        assembly {
+            proxy := create(0, add(code, 0x20), mload(code))
+        }
         require(proxy != address(0), "proxy fail");
         return proxy;
     }
 
     function testRecordFillIdempotent() public {
-    IPerpEngine.Fill memory f = IPerpEngine.Fill({
+        IPerpEngine.Fill memory f = IPerpEngine.Fill({
             fillId: keccak256("fill1"),
             account: address(this),
             marketId: MARKET,
@@ -61,7 +65,8 @@ contract PerpEngineTest is Test {
             priceZ: 1e18,
             feeZ: 1000,
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("fill1")
         });
         engine.recordFill(f);
         vm.expectRevert(bytes("dup fillId"));

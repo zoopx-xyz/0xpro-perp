@@ -28,7 +28,7 @@ contract OracleStalePriceRevertTest is Test {
     address keeper = address(0x456);
     address user = address(0x789);
     address signer = address(0xabc);
-    
+
     bytes32 marketId = keccak256("BTC-PERP");
     uint256 constant MAX_STALE = 300; // 5 minutes
 
@@ -39,42 +39,45 @@ contract OracleStalePriceRevertTest is Test {
         zUSD = new MockzUSD();
         mBTC = new MockERC20("Mock BTC", "mBTC", 8);
 
-    // Deploy via proxies to respect upgradeable initialize patterns
-    SignedPriceOracle oracleImpl = new SignedPriceOracle();
-    oracle = SignedPriceOracle(address(new ERC1967Proxy(address(oracleImpl), "")));
-    oracle.initialize(admin, signer, uint64(MAX_STALE));
+        // Deploy via proxies to respect upgradeable initialize patterns
+        SignedPriceOracle oracleImpl = new SignedPriceOracle();
+        oracle = SignedPriceOracle(address(new ERC1967Proxy(address(oracleImpl), "")));
+        oracle.initialize(admin, signer, uint64(MAX_STALE));
 
-    OracleRouter routerImpl = new OracleRouter();
-    router = OracleRouter(address(new ERC1967Proxy(address(routerImpl), "")));
-    router.initialize(admin);
+        OracleRouter routerImpl = new OracleRouter();
+        router = OracleRouter(address(new ERC1967Proxy(address(routerImpl), "")));
+        router.initialize(admin);
         router.registerAdapter(address(mBTC), address(oracle));
 
-    CollateralManager cmImpl = new CollateralManager();
-    collateralManager = CollateralManager(address(new ERC1967Proxy(address(cmImpl), "")));
-    collateralManager.initialize(admin, address(router));
+        CollateralManager cmImpl = new CollateralManager();
+        collateralManager = CollateralManager(address(new ERC1967Proxy(address(cmImpl), "")));
+        collateralManager.initialize(admin, address(router));
         collateralManager.setAssetConfig(address(zUSD), true, 10000, address(router), 6);
         // Register zUSD on the router and set its price to 1.0 to enable valuation in CollateralManager
         router.registerAdapter(address(zUSD), address(oracle));
 
-    MarginVaultV2 mvImpl = new MarginVaultV2();
-    vault = MarginVaultV2(address(new ERC1967Proxy(address(mvImpl), "")));
-    vault.initialize(admin, address(collateralManager));
+        MarginVaultV2 mvImpl = new MarginVaultV2();
+        vault = MarginVaultV2(address(new ERC1967Proxy(address(mvImpl), "")));
+        vault.initialize(admin, address(collateralManager));
 
-    RiskConfig rcImpl = new RiskConfig();
-    riskConfig = RiskConfig(address(new ERC1967Proxy(address(rcImpl), "")));
-    riskConfig.initialize(admin);
-        riskConfig.setMarketRisk(marketId, RiskConfig.MarketRisk({
-            imrBps: 500,
-            mmrBps: 250,
-            liqPenaltyBps: 50,
-            makerFeeBps: 0,
-            takerFeeBps: 0,
-            maxLev: 20
-        })); // 5% IMR, 2.5% MMR, 0.5% penalty
+        RiskConfig rcImpl = new RiskConfig();
+        riskConfig = RiskConfig(address(new ERC1967Proxy(address(rcImpl), "")));
+        riskConfig.initialize(admin);
+        riskConfig.setMarketRisk(
+            marketId,
+            RiskConfig.MarketRisk({
+                imrBps: 500,
+                mmrBps: 250,
+                liqPenaltyBps: 50,
+                makerFeeBps: 0,
+                takerFeeBps: 0,
+                maxLev: 20
+            })
+        ); // 5% IMR, 2.5% MMR, 0.5% penalty
 
-    PerpEngine peImpl = new PerpEngine();
-    engine = PerpEngine(address(new ERC1967Proxy(address(peImpl), "")));
-    engine.initialize(admin, address(vault));
+        PerpEngine peImpl = new PerpEngine();
+        engine = PerpEngine(address(new ERC1967Proxy(address(peImpl), "")));
+        engine.initialize(admin, address(vault));
         engine.setDeps(
             address(riskConfig),
             address(router),
@@ -87,14 +90,14 @@ contract OracleStalePriceRevertTest is Test {
         engine.registerMarket(marketId, address(mBTC), 8, "BTC-PERP");
 
         // Grant roles
-    vault.grantRole(Constants.ENGINE, address(engine));
+        vault.grantRole(Constants.ENGINE, address(engine));
         engine.grantRole(Constants.KEEPER, keeper);
         oracle.grantRole(Constants.PRICE_KEEPER, keeper);
 
-    // Set initial price (fresh)
+        // Set initial price (fresh)
         vm.warp(1000);
         oracle.setPrice(address(mBTC), 50000e18, uint64(block.timestamp));
-    oracle.setPrice(address(zUSD), 1e18, uint64(block.timestamp));
+        oracle.setPrice(address(zUSD), 1e18, uint64(block.timestamp));
 
         vm.stopPrank();
     }
@@ -137,7 +140,8 @@ contract OracleStalePriceRevertTest is Test {
             priceZ: 50000e18,
             feeZ: 0,
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("test_fill_1")
         });
 
         vm.prank(keeper);
@@ -164,7 +168,8 @@ contract OracleStalePriceRevertTest is Test {
             priceZ: 50000e18,
             feeZ: 0,
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("test_fill_1")
         });
 
         vm.prank(keeper);
@@ -214,7 +219,7 @@ contract OracleStalePriceRevertTest is Test {
     function testRefreshPriceMakesFreshAgain() public {
         // Make price stale
         vm.warp(block.timestamp + MAX_STALE + 1);
-        
+
         (, bool isStale) = router.getPriceAndStale(address(mBTC));
         assertTrue(isStale);
 
@@ -235,7 +240,7 @@ contract OracleStalePriceRevertTest is Test {
 
         // Even after long time, should not be stale
         vm.warp(block.timestamp + 365 days);
-        
+
         (, bool isStale) = router.getPriceAndStale(address(mBTC));
         assertFalse(isStale);
     }
@@ -243,7 +248,7 @@ contract OracleStalePriceRevertTest is Test {
     function testEmptyPriceIsStale() public {
         // Register new asset without setting price
         MockERC20 mETH = new MockERC20("Mock ETH", "mETH", 18);
-        
+
         vm.prank(admin);
         router.registerAdapter(address(mETH), address(oracle));
 

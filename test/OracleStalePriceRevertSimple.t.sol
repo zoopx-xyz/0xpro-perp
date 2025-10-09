@@ -12,34 +12,34 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 contract OracleStalePriceRevertSimpleTest is Test {
     SignedPriceOracle oracle;
     OracleRouter router;
-    
+
     address admin = address(0x123);
     address keeper = address(0x456);
     address signer = address(0xabc);
     address mockBTC = address(0xdef);
-    
+
     uint256 constant MAX_STALE = 300; // 5 minutes
 
     function setUp() public {
         vm.startPrank(admin);
-        
-    // Deploy via proxies to respect upgradeable initialize patterns
-    SignedPriceOracle oracleImpl = new SignedPriceOracle();
-    oracle = SignedPriceOracle(address(new ERC1967Proxy(address(oracleImpl), "")));
-    oracle.initialize(admin, signer, uint64(MAX_STALE));
-        
-    OracleRouter routerImpl = new OracleRouter();
-    router = OracleRouter(address(new ERC1967Proxy(address(routerImpl), "")));
-    router.initialize(admin);
+
+        // Deploy via proxies to respect upgradeable initialize patterns
+        SignedPriceOracle oracleImpl = new SignedPriceOracle();
+        oracle = SignedPriceOracle(address(new ERC1967Proxy(address(oracleImpl), "")));
+        oracle.initialize(admin, signer, uint64(MAX_STALE));
+
+        OracleRouter routerImpl = new OracleRouter();
+        router = OracleRouter(address(new ERC1967Proxy(address(routerImpl), "")));
+        router.initialize(admin);
         router.registerAdapter(mockBTC, address(oracle));
-        
+
         // Grant roles
         oracle.grantRole(Constants.PRICE_KEEPER, keeper);
-        
+
         // Set initial price (fresh)
         vm.warp(1000);
         oracle.setPrice(mockBTC, 50000e18, uint64(block.timestamp));
-        
+
         vm.stopPrank();
     }
 
@@ -71,7 +71,7 @@ contract OracleStalePriceRevertSimpleTest is Test {
     function testRefreshPriceMakesFreshAgain() public {
         // Make price stale
         vm.warp(block.timestamp + MAX_STALE + 1);
-        
+
         (, bool isStale) = router.getPriceAndStale(mockBTC);
         assertTrue(isStale);
 
@@ -92,7 +92,7 @@ contract OracleStalePriceRevertSimpleTest is Test {
 
         // Even after long time, should not be stale
         vm.warp(block.timestamp + 365 days);
-        
+
         (, bool isStale) = router.getPriceAndStale(mockBTC);
         assertFalse(isStale);
     }
@@ -100,7 +100,7 @@ contract OracleStalePriceRevertSimpleTest is Test {
     function testEmptyPriceIsStale() public {
         // Register new asset without setting price
         address mockETH = address(0x888);
-        
+
         vm.prank(admin);
         router.registerAdapter(mockETH, address(oracle));
 

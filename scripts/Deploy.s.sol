@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Script} from "forge-std/Script.sol";
+import "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {Constants} from "../lib/Constants.sol";
@@ -166,6 +167,21 @@ contract Deploy is Script {
         
         // Grant FORWARDER_ROLE on Treasury to PerpEngine
         ts.grantRole(keccak256("FORWARDER_ROLE"), address(pe));
+
+        // Optionally grant KEEPER role to relayers provided via environment variables
+        address relayer1 = vm.envAddress("RELAYER_1");
+        address relayer2 = vm.envAddress("RELAYER_2");
+        bytes32 KEEPER = Constants.KEEPER;
+        if (relayer1 != address(0)) {
+            pe.grantRole(KEEPER, relayer1);
+            console.log("Granted KEEPER to RELAYER_1");
+            console.logAddress(relayer1);
+        }
+        if (relayer2 != address(0)) {
+            pe.grantRole(KEEPER, relayer2);
+            console.log("Granted KEEPER to RELAYER_2");
+            console.logAddress(relayer2);
+        }
 
         vm.stopBroadcast();
     }

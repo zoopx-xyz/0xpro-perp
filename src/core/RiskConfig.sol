@@ -8,13 +8,23 @@ import {Constants} from "../../lib/Constants.sol";
 import {MathUtils} from "../../lib/MathUtils.sol";
 
 contract RiskConfig is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
-    struct MarketRisk { uint16 imrBps; uint16 mmrBps; uint16 liqPenaltyBps; uint16 makerFeeBps; uint16 takerFeeBps; uint8 maxLev; }
+    struct MarketRisk {
+        uint16 imrBps;
+        uint16 mmrBps;
+        uint16 liqPenaltyBps;
+        uint16 makerFeeBps;
+        uint16 takerFeeBps;
+        uint8 maxLev;
+    }
+
     mapping(bytes32 => MarketRisk) public risks;
 
     event MarketRiskSet(bytes32 indexed marketId, MarketRisk risk);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(address admin) external initializer {
         __AccessControl_init();
@@ -46,7 +56,13 @@ contract RiskConfig is Initializable, AccessControlUpgradeable, UUPSUpgradeable 
         return risks[marketId].liqPenaltyBps;
     }
 
-    function requiredInitialMarginZ(bytes32 marketId, address /*baseAsset*/, uint256 sizeRaw, uint8 assetDecimals, uint256 priceX1e18) external view returns (uint256) {
+    function requiredInitialMarginZ(
+        bytes32 marketId,
+        address, /*baseAsset*/
+        uint256 sizeRaw,
+        uint8 assetDecimals,
+        uint256 priceX1e18
+    ) external view returns (uint256) {
         uint256 notionalZ = MathUtils.notionalZFromSize(sizeRaw, assetDecimals, priceX1e18);
         uint16 imr = risks[marketId].imrBps;
         return (notionalZ * imr) / 10_000;

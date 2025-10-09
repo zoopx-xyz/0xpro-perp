@@ -11,14 +11,18 @@ import {Constants} from "../../lib/Constants.sol";
 /// @title OracleRouter
 /// @notice Simple router that queries a configured adapter per asset
 contract OracleRouter is Initializable, AccessControlUpgradeable, UUPSUpgradeable, IOracleRouter {
-    struct Adapter { address oracle; }
+    struct Adapter {
+        address oracle;
+    }
 
     mapping(address => Adapter) public adapters; // asset => adapter
 
     event AdapterRegistered(address indexed asset, address indexed oracle);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(address admin) external initializer {
         __AccessControl_init();

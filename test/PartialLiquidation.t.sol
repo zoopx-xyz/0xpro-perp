@@ -78,7 +78,15 @@ contract PartialLiquidationTest is Test {
         fundingModule.initialize(admin);
 
         // Wire dependencies
-        perpEngine.setDeps(address(riskConfig), address(oracleRouter), address(cm), address(treasury), address(feeSplitter), address(fundingModule), address(zUsd));
+        perpEngine.setDeps(
+            address(riskConfig),
+            address(oracleRouter),
+            address(cm),
+            address(treasury),
+            address(feeSplitter),
+            address(fundingModule),
+            address(zUsd)
+        );
         vault.setDeps(address(riskConfig), address(oracleRouter), address(perpEngine));
 
         // Configure oracle and market
@@ -94,13 +102,13 @@ contract PartialLiquidationTest is Test {
         feeSplitter.setZUsdToken(address(zUsd));
         feeSplitter.setRecipients(admin, admin, admin, admin);
 
-    // Allow vault to transfer zUSD to treasury for penalty collection
-    zUsd.approve(address(treasury), type(uint256).max);
+        // Allow vault to transfer zUSD to treasury for penalty collection
+        zUsd.approve(address(treasury), type(uint256).max);
 
         // Setup market with high liquidation penalty for testing
         RiskConfig.MarketRisk memory risk = RiskConfig.MarketRisk({
             imrBps: 1000, // 10%
-            mmrBps: 500,  // 5%
+            mmrBps: 500, // 5%
             liqPenaltyBps: 200, // 2%
             makerFeeBps: 5,
             takerFeeBps: 10,
@@ -134,35 +142,35 @@ contract PartialLiquidationTest is Test {
         // Create a position of 10 BTC
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 30_000 * 1e6, 2); // 30k collateral, 2x leverage = ~1 BTC position
-        
+
         int256 initialPosition = perpEngine.getPosition(user, BTC_PERP);
         assertGt(initialPosition, 0);
-        
+
         // Make position liquidatable by dropping BTC price
         vm.prank(admin);
         spo.setPrice(address(mockBTC), 10000e18, uint64(block.timestamp)); // Severe drop to make liquidatable
-        
-    // Record initial treasury balance
-    uint256 treasuryInitialBalance = zUsd.balanceOf(address(treasury));
-        
+
+        // Record initial treasury balance
+        uint256 treasuryInitialBalance = zUsd.balanceOf(address(treasury));
+
         // Keeper partially liquidates half the position
         uint128 closeSize = uint128(uint256(initialPosition) / 2);
         uint128 remainingSize = uint128(uint256(initialPosition) - uint256(closeSize));
-        
+
         vm.prank(keeper);
         // Skip event checking for now - just ensure function works
         // vm.expectEmit(true, true, false, true);
         // emit PartialLiquidation(user, BTC_PERP, closeSize, 10000e18, expectedPenalty, remainingSize);
         perpEngine.liquidatePartial(user, BTC_PERP, closeSize);
-        
+
         // Check position was reduced
         int256 finalPosition = perpEngine.getPosition(user, BTC_PERP);
         assertEq(finalPosition, initialPosition - int256(uint256(closeSize)));
-        
-    // Penalty should have increased treasury balance (>= initial)
-    uint256 treasuryFinalBalance = zUsd.balanceOf(address(treasury));
-    assertGt(treasuryFinalBalance, treasuryInitialBalance, "penalty not transferred");
-        
+
+        // Penalty should have increased treasury balance (>= initial)
+        uint256 treasuryFinalBalance = zUsd.balanceOf(address(treasury));
+        assertGt(treasuryFinalBalance, treasuryInitialBalance, "penalty not transferred");
+
         // Check that user is still in the open markets list (partial liquidation)
         bytes32[] memory openMarkets = perpEngine.getOpenMarketsForAccount(user);
         bool found = false;
@@ -179,30 +187,30 @@ contract PartialLiquidationTest is Test {
         // Create a position
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 30_000 * 1e6, 2);
-        
+
         int256 initialPosition = perpEngine.getPosition(user, BTC_PERP);
         assertGt(initialPosition, 0);
-        
+
         // Verify user is in open markets
         bytes32[] memory openMarketsBefore = perpEngine.getOpenMarketsForAccount(user);
         assertEq(openMarketsBefore.length, 1);
         assertEq(openMarketsBefore[0], BTC_PERP);
-        
+
         // Make position liquidatable
         vm.prank(admin);
         spo.setPrice(address(mockBTC), 10000e18, uint64(block.timestamp));
-        
+
         // Full liquidation
-    uint256 treasuryBefore = zUsd.balanceOf(address(treasury));
+        uint256 treasuryBefore = zUsd.balanceOf(address(treasury));
         vm.prank(keeper);
         perpEngine.liquidate(user, BTC_PERP);
-    uint256 treasuryAfter = zUsd.balanceOf(address(treasury));
-    assertGt(treasuryAfter, treasuryBefore, "treasury did not receive penalty");
-        
+        uint256 treasuryAfter = zUsd.balanceOf(address(treasury));
+        assertGt(treasuryAfter, treasuryBefore, "treasury did not receive penalty");
+
         // Check position is zero
         int256 finalPosition = perpEngine.getPosition(user, BTC_PERP);
         assertEq(finalPosition, 0);
-        
+
         // Check that user is removed from open markets list
         bytes32[] memory openMarketsAfter = perpEngine.getOpenMarketsForAccount(user);
         assertEq(openMarketsAfter.length, 0);
@@ -212,26 +220,26 @@ contract PartialLiquidationTest is Test {
         // Create a position
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 30_000 * 1e6, 2);
-        
+
         int256 initialPosition = perpEngine.getPosition(user, BTC_PERP);
         assertGt(initialPosition, 0);
-        
+
         // Make position liquidatable
         vm.prank(admin);
         spo.setPrice(address(mockBTC), 10000e18, uint64(block.timestamp));
-        
+
         // Partial liquidation with full size should work like full liquidation
         uint128 fullSize = uint128(uint256(initialPosition));
-    uint256 treasuryBefore = zUsd.balanceOf(address(treasury));
-    vm.prank(keeper);
-    perpEngine.liquidatePartial(user, BTC_PERP, fullSize);
-    uint256 treasuryAfter = zUsd.balanceOf(address(treasury));
-    assertGt(treasuryAfter, treasuryBefore, "treasury did not receive penalty on full partial liquidation");
-        
+        uint256 treasuryBefore = zUsd.balanceOf(address(treasury));
+        vm.prank(keeper);
+        perpEngine.liquidatePartial(user, BTC_PERP, fullSize);
+        uint256 treasuryAfter = zUsd.balanceOf(address(treasury));
+        assertGt(treasuryAfter, treasuryBefore, "treasury did not receive penalty on full partial liquidation");
+
         // Check position is zero
         int256 finalPosition = perpEngine.getPosition(user, BTC_PERP);
         assertEq(finalPosition, 0);
-        
+
         // Check that user is removed from open markets list
         bytes32[] memory openMarketsAfter = perpEngine.getOpenMarketsForAccount(user);
         assertEq(openMarketsAfter.length, 0);
@@ -241,20 +249,20 @@ contract PartialLiquidationTest is Test {
         // Create a position
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 30_000 * 1e6, 2);
-        
+
         int256 initialPosition = perpEngine.getPosition(user, BTC_PERP);
-        
+
         // Make position liquidatable
         vm.prank(admin);
         spo.setPrice(address(mockBTC), 10000e18, uint64(block.timestamp));
-        
+
         // Try to liquidate more than position size
         uint128 oversizeClose = uint128(uint256(initialPosition) + 1);
-        
+
         vm.prank(keeper);
         vm.expectRevert("close size exceeds position");
         perpEngine.liquidatePartial(user, BTC_PERP, oversizeClose);
-        
+
         // Try to liquidate zero
         vm.prank(keeper);
         vm.expectRevert("invalid close size");
@@ -265,11 +273,11 @@ contract PartialLiquidationTest is Test {
         // Create a position
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 30_000 * 1e6, 2);
-        
+
         // Make position liquidatable
         vm.prank(admin);
         spo.setPrice(address(mockBTC), 10000e18, uint64(block.timestamp));
-        
+
         // Non-keeper cannot liquidate
         vm.prank(user);
         vm.expectRevert();
@@ -277,5 +285,12 @@ contract PartialLiquidationTest is Test {
     }
 
     // Event definition for testing
-    event PartialLiquidation(address indexed account, bytes32 marketId, uint128 closedSize, uint128 priceZ, uint128 penaltyZ, uint128 remainingSize);
+    event PartialLiquidation(
+        address indexed account,
+        bytes32 marketId,
+        uint128 closedSize,
+        uint128 priceZ,
+        uint128 penaltyZ,
+        uint128 remainingSize
+    );
 }

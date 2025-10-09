@@ -15,5 +15,8 @@ interface ICollateralManager {
 
     function collateralValueInZUSD(address asset, uint256 amount) external view returns (uint256 collatZ18);
 
-    function config(address asset) external view returns (bool enabled, uint16 ltvBps, address oracle, uint8 decimals);
+    function config(address asset)
+        external
+        view
+        returns (bool enabled, uint16 ltvBps, address oracle, uint8 decimals);
 }

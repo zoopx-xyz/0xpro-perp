@@ -11,7 +11,13 @@ import {Constants} from "../../lib/Constants.sol";
 
 /// @title CollateralManager
 /// @notice Stores per-asset configs, LTVs and valuation helpers
-contract CollateralManager is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, ICollateralManager {
+contract CollateralManager is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ICollateralManager
+{
     using Constants for uint256;
 
     mapping(address => AssetConfig) public config;
@@ -38,12 +44,18 @@ contract CollateralManager is Initializable, AccessControlUpgradeable, UUPSUpgra
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}
 
-    function setAssetConfig(address asset, bool enabled, uint16 ltvBps, address oracle, uint8 decimals_) external override onlyRole(Constants.RISK_ADMIN) {
-        if (!_isAssetKnown[asset]) { _isAssetKnown[asset] = true; _assets.push(asset); }
+    function setAssetConfig(address asset, bool enabled, uint16 ltvBps, address oracle, uint8 decimals_)
+        external
+        override
+        onlyRole(Constants.RISK_ADMIN)
+    {
+        if (!_isAssetKnown[asset]) {
+            _isAssetKnown[asset] = true;
+            _assets.push(asset);
+        }
         config[asset] = AssetConfig({enabled: enabled, ltvBps: ltvBps, oracle: oracle, decimals: decimals_});
         emit AssetConfigSet(asset, enabled, ltvBps, oracle, decimals_);
     }
-
 
     function assetValueInZUSD(address asset, uint256 amount) public view override returns (uint256 valueZ18) {
         AssetConfig memory c = config[asset];

@@ -76,7 +76,15 @@ contract FeeSplitterTransferTest is Test {
         feeSplitter.initialize(admin);
 
         // Wire dependencies
-        perpEngine.setDeps(address(riskConfig), address(oracleRouter), address(cm), address(treasury), address(feeSplitter), address(0), address(zUsd));
+        perpEngine.setDeps(
+            address(riskConfig),
+            address(oracleRouter),
+            address(cm),
+            address(treasury),
+            address(feeSplitter),
+            address(0),
+            address(zUsd)
+        );
         vault.setDeps(address(riskConfig), address(oracleRouter), address(perpEngine));
 
         // Configure oracle and market
@@ -91,14 +99,14 @@ contract FeeSplitterTransferTest is Test {
         treasury.setZUsdToken(address(zUsd));
         feeSplitter.setZUsdToken(address(zUsd));
         feeSplitter.setRecipients(treasuryRecipient, insuranceRecipient, uiRecipient, referralRecipient);
-        
+
         // Set custom split: 50% treasury, 30% insurance, 10% UI, 10% referral
         feeSplitter.setSplit(5000, 3000, 1000, 1000);
 
         // Setup market
         RiskConfig.MarketRisk memory risk = RiskConfig.MarketRisk({
             imrBps: 1000, // 10%
-            mmrBps: 500,  // 5%
+            mmrBps: 500, // 5%
             liqPenaltyBps: 100, // 1%
             makerFeeBps: 5,
             takerFeeBps: 10,
@@ -148,7 +156,8 @@ contract FeeSplitterTransferTest is Test {
             priceZ: 60000 * 1e18,
             feeZ: uint128(feeAmount),
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("test_fill_1")
         });
 
         // Record the fill (this should trigger fee forwarding and splitting)
@@ -160,13 +169,29 @@ contract FeeSplitterTransferTest is Test {
         uint256 expectedUI = (feeAmount * 1000) / 10000; // 10%
         uint256 expectedReferral = (feeAmount * 1000) / 10000; // 10%
 
-        assertEq(zUsd.balanceOf(treasuryRecipient), treasuryInitial + expectedTreasury, "Treasury recipient balance incorrect");
-        assertEq(zUsd.balanceOf(insuranceRecipient), insuranceInitial + expectedInsurance, "Insurance recipient balance incorrect");
+        assertEq(
+            zUsd.balanceOf(treasuryRecipient),
+            treasuryInitial + expectedTreasury,
+            "Treasury recipient balance incorrect"
+        );
+        assertEq(
+            zUsd.balanceOf(insuranceRecipient),
+            insuranceInitial + expectedInsurance,
+            "Insurance recipient balance incorrect"
+        );
         assertEq(zUsd.balanceOf(uiRecipient), uiInitial + expectedUI, "UI recipient balance incorrect");
-        assertEq(zUsd.balanceOf(referralRecipient), referralInitial + expectedReferral, "Referral recipient balance incorrect");
+        assertEq(
+            zUsd.balanceOf(referralRecipient),
+            referralInitial + expectedReferral,
+            "Referral recipient balance incorrect"
+        );
 
         // Check that treasury contract balance decreased by the fee amount
-        assertEq(zUsd.balanceOf(address(treasury)), treasuryContractInitial - feeAmount, "Treasury contract balance incorrect");
+        assertEq(
+            zUsd.balanceOf(address(treasury)),
+            treasuryContractInitial - feeAmount,
+            "Treasury contract balance incorrect"
+        );
 
         vm.stopPrank();
     }
@@ -189,7 +214,8 @@ contract FeeSplitterTransferTest is Test {
             priceZ: 60000 * 1e18,
             feeZ: 0, // Zero fees
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("test_fill_zero")
         });
 
         // Record the fill
@@ -198,7 +224,9 @@ contract FeeSplitterTransferTest is Test {
         // Check that no fees were transferred
         assertEq(zUsd.balanceOf(treasuryRecipient), treasuryInitial, "Treasury recipient should not receive fees");
         assertEq(zUsd.balanceOf(insuranceRecipient), insuranceInitial, "Insurance recipient should not receive fees");
-        assertEq(zUsd.balanceOf(address(treasury)), treasuryContractInitial, "Treasury contract balance should be unchanged");
+        assertEq(
+            zUsd.balanceOf(address(treasury)), treasuryContractInitial, "Treasury contract balance should be unchanged"
+        );
 
         vm.stopPrank();
     }
@@ -222,7 +250,8 @@ contract FeeSplitterTransferTest is Test {
             priceZ: 60000 * 1e18,
             feeZ: uint128(feeAmount),
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("test_fill_custom")
         });
 
         perpEngine.recordFill(fill);

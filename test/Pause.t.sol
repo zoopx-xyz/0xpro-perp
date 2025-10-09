@@ -78,7 +78,15 @@ contract PauseTest is Test {
         fundingModule.initialize(admin);
 
         // Wire dependencies
-        perpEngine.setDeps(address(riskConfig), address(oracleRouter), address(cm), address(treasury), address(feeSplitter), address(fundingModule), address(zUsd));
+        perpEngine.setDeps(
+            address(riskConfig),
+            address(oracleRouter),
+            address(cm),
+            address(treasury),
+            address(feeSplitter),
+            address(fundingModule),
+            address(zUsd)
+        );
         vault.setDeps(address(riskConfig), address(oracleRouter), address(perpEngine));
 
         // Configure oracle and market
@@ -97,7 +105,7 @@ contract PauseTest is Test {
         // Setup market
         RiskConfig.MarketRisk memory risk = RiskConfig.MarketRisk({
             imrBps: 1000, // 10%
-            mmrBps: 500,  // 5%
+            mmrBps: 500, // 5%
             liqPenaltyBps: 100, // 1%
             makerFeeBps: 5,
             takerFeeBps: 10,
@@ -109,7 +117,7 @@ contract PauseTest is Test {
         // Grant roles
         vault.grantRole(Constants.ENGINE, address(perpEngine));
         treasury.grantRole(Constants.FORWARDER_ROLE, address(perpEngine));
-        
+
         // Grant guardian PAUSER_ROLE
         perpEngine.grantRole(Constants.PAUSER_ROLE, guardian);
         vault.grantRole(Constants.PAUSER_ROLE, guardian);
@@ -132,12 +140,12 @@ contract PauseTest is Test {
     function testPauseUnpauseEngine() public {
         // Initially not paused
         assertFalse(perpEngine.paused());
-        
+
         // Admin can pause
         vm.prank(admin);
         perpEngine.pause();
         assertTrue(perpEngine.paused());
-        
+
         // Admin can unpause
         vm.prank(admin);
         perpEngine.unpause();
@@ -149,7 +157,7 @@ contract PauseTest is Test {
         vm.prank(guardian);
         perpEngine.pause();
         assertTrue(perpEngine.paused());
-        
+
         // Guardian can unpause
         vm.prank(guardian);
         perpEngine.unpause();
@@ -161,11 +169,11 @@ contract PauseTest is Test {
         vm.prank(user);
         vm.expectRevert();
         perpEngine.pause();
-        
+
         // Non-pauser cannot unpause
         vm.prank(admin);
         perpEngine.pause();
-        
+
         vm.prank(user);
         vm.expectRevert();
         perpEngine.unpause();
@@ -175,7 +183,7 @@ contract PauseTest is Test {
         // Pause the engine
         vm.prank(admin);
         perpEngine.pause();
-        
+
         // recordFill should revert when paused
         IPerpEngine.Fill memory fill = IPerpEngine.Fill({
             fillId: bytes32("test_fill"),
@@ -186,9 +194,10 @@ contract PauseTest is Test {
             priceZ: 60000 * 1e18,
             feeZ: 1000,
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("test_fill")
         });
-        
+
         vm.prank(admin);
         vm.expectRevert("Pausable: paused");
         perpEngine.recordFill(fill);
@@ -198,7 +207,7 @@ contract PauseTest is Test {
         // Pause the engine
         vm.prank(admin);
         perpEngine.pause();
-        
+
         // openPosition should revert when paused
         vm.prank(user);
         vm.expectRevert("Pausable: paused");
@@ -209,7 +218,7 @@ contract PauseTest is Test {
         // Pause the vault
         vm.prank(admin);
         vault.pause();
-        
+
         // deposit should revert when paused
         vm.prank(user);
         vm.expectRevert("Pausable: paused");
@@ -220,7 +229,7 @@ contract PauseTest is Test {
         // Pause the vault
         vm.prank(admin);
         vault.pause();
-        
+
         // withdraw should revert when paused
         vm.prank(user);
         vm.expectRevert("Pausable: paused");
@@ -231,11 +240,11 @@ contract PauseTest is Test {
         // Ensure not paused
         assertFalse(perpEngine.paused());
         assertFalse(vault.paused());
-        
+
         // Operations should work normally
         vm.prank(user);
         perpEngine.openPosition(BTC_PERP, true, 10_000 * 1e6, 2);
-        
+
         // Verify position was created
         int256 position = perpEngine.getPosition(user, BTC_PERP);
         assertGt(position, 0);

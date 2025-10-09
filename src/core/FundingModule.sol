@@ -9,11 +9,13 @@ import {Constants} from "../../lib/Constants.sol";
 
 contract FundingModule is Initializable, AccessControlUpgradeable, UUPSUpgradeable, IFundingModule {
     mapping(bytes32 => int128) public fundingIndex; // marketId => index
-    
+
     event FundingUpdated(bytes32 indexed marketId, int128 index, int128 rate);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(address admin) external initializer {
         __AccessControl_init();

@@ -26,20 +26,18 @@ contract FeeSplitterSpoke is Initializable, AccessControlUpgradeable, UUPSUpgrad
 
     event FeeSplitExecuted(uint256 feeZ, uint256 toTreasury, uint256 toInsurance, uint256 toUI, uint256 toReferral);
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
+
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(address admin) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(Constants.DEFAULT_ADMIN, admin);
-        
+
         // Set default MVP split: 80% treasury, 20% insurance, 0% UI, 0% referral
-        feeSplit = FeesSplit({
-            treasuryBps: 8000,
-            insuranceBps: 2000,
-            uiBps: 0,
-            referralBps: 0
-        });
+        feeSplit = FeesSplit({treasuryBps: 8000, insuranceBps: 2000, uiBps: 0, referralBps: 0});
     }
 
     function setZUsdToken(address _zUsdToken) external onlyRole(Constants.DEFAULT_ADMIN) {
@@ -58,33 +56,34 @@ contract FeeSplitterSpoke is Initializable, AccessControlUpgradeable, UUPSUpgrad
         referralRecipient = _referralRecipient;
     }
 
-    function setSplit(uint16 treasuryBps, uint16 insuranceBps, uint16 uiBps, uint16 referralBps) 
-        external onlyRole(Constants.DEFAULT_ADMIN) {
+    function setSplit(uint16 treasuryBps, uint16 insuranceBps, uint16 uiBps, uint16 referralBps)
+        external
+        onlyRole(Constants.DEFAULT_ADMIN)
+    {
         require(treasuryBps + insuranceBps + uiBps + referralBps <= 10000, "split exceeds 100%");
-        
-        feeSplit = FeesSplit({
-            treasuryBps: treasuryBps,
-            insuranceBps: insuranceBps,
-            uiBps: uiBps,
-            referralBps: referralBps
-        });
+
+        feeSplit =
+            FeesSplit({treasuryBps: treasuryBps, insuranceBps: insuranceBps, uiBps: uiBps, referralBps: referralBps});
     }
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}
 
-    function splitFees(uint256 feeZ) external returns (uint256 toTreasury, uint256 toInsurance, uint256 toUI, uint256 toReferral) {
+    function splitFees(uint256 feeZ)
+        external
+        returns (uint256 toTreasury, uint256 toInsurance, uint256 toUI, uint256 toReferral)
+    {
         require(feeZ > 0, "invalid fee amount");
         require(zUsdToken != address(0), "zUSD not set");
-        
+
         // Calculate splits
         toTreasury = (feeZ * feeSplit.treasuryBps) / 10000;
         toInsurance = (feeZ * feeSplit.insuranceBps) / 10000;
         toUI = (feeZ * feeSplit.uiBps) / 10000;
         toReferral = (feeZ * feeSplit.referralBps) / 10000;
-        
+
         // Transfer to recipients
         IERC20 token = IERC20(zUsdToken);
-        
+
         if (toTreasury > 0 && treasuryRecipient != address(0)) {
             token.safeTransfer(treasuryRecipient, toTreasury);
         }
@@ -97,7 +96,7 @@ contract FeeSplitterSpoke is Initializable, AccessControlUpgradeable, UUPSUpgrad
         if (toReferral > 0 && referralRecipient != address(0)) {
             token.safeTransfer(referralRecipient, toReferral);
         }
-        
+
         emit FeeSplitExecuted(feeZ, toTreasury, toInsurance, toUI, toReferral);
     }
 

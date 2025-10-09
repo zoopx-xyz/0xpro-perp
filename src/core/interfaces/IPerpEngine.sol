@@ -12,6 +12,7 @@ interface IPerpEngine {
         uint128 feeZ;
         int128 fundingZ;
         uint64 ts;
+        bytes32 orderDigest;
     }
 
     function recordFill(Fill calldata f) external;

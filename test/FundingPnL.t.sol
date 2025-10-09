@@ -78,7 +78,15 @@ contract FundingPnLTest is Test {
         fundingModule.initialize(admin);
 
         // Wire dependencies
-        perpEngine.setDeps(address(riskConfig), address(oracleRouter), address(cm), address(treasury), address(feeSplitter), address(fundingModule), address(zUsd));
+        perpEngine.setDeps(
+            address(riskConfig),
+            address(oracleRouter),
+            address(cm),
+            address(treasury),
+            address(feeSplitter),
+            address(fundingModule),
+            address(zUsd)
+        );
         vault.setDeps(address(riskConfig), address(oracleRouter), address(perpEngine));
 
         // Configure oracle and market
@@ -97,7 +105,7 @@ contract FundingPnLTest is Test {
         // Setup market
         RiskConfig.MarketRisk memory risk = RiskConfig.MarketRisk({
             imrBps: 1000, // 10%
-            mmrBps: 500,  // 5%
+            mmrBps: 500, // 5%
             liqPenaltyBps: 100, // 1%
             makerFeeBps: 5,
             takerFeeBps: 10,
@@ -171,7 +179,7 @@ contract FundingPnLTest is Test {
         // Check initial PnL (without funding)
         int256 initialPnL = perpEngine.getUnrealizedPnlZ(user);
         int256 initialPnLWithFunding = perpEngine.getUnrealizedPnlZWithFunding(user);
-        
+
         // Initially, both should be similar (funding index starts at 0)
         assertEq(initialPnL, initialPnLWithFunding);
 
@@ -183,7 +191,7 @@ contract FundingPnLTest is Test {
 
         // Check PnL after funding update
         int256 pnlAfterFunding = perpEngine.getUnrealizedPnlZWithFunding(user);
-        
+
         // PnL with funding should be different now
         // For a long position with positive funding, PnL should decrease (longs pay)
         assertLt(pnlAfterFunding, initialPnLWithFunding);
@@ -195,7 +203,7 @@ contract FundingPnLTest is Test {
         fundingModule.updateFundingIndex(BTC_PERP, negativeFunding);
 
         int256 finalPnLWithFunding = perpEngine.getUnrealizedPnlZWithFunding(user);
-        
+
         // Now PnL should be higher than after positive funding (longs receive from shorts)
         assertGt(finalPnLWithFunding, pnlAfterFunding);
     }
@@ -215,7 +223,8 @@ contract FundingPnLTest is Test {
             priceZ: 60000 * 1e18,
             feeZ: 1000,
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("test_fill")
         });
 
         vm.prank(admin); // Admin has KEEPER role
@@ -239,7 +248,8 @@ contract FundingPnLTest is Test {
             priceZ: 60000 * 1e18,
             feeZ: 500,
             fundingZ: 0,
-            ts: uint64(block.timestamp)
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("test_fill_2")
         });
 
         vm.prank(admin);
@@ -261,7 +271,7 @@ contract FundingPnLTest is Test {
 
         // Change BTC price
         vm.prank(admin);
-        spo.setPrice(address(mockBTC), 70000e18, uint64(block.timestamp)); // Price up 
+        spo.setPrice(address(mockBTC), 70000e18, uint64(block.timestamp)); // Price up
 
         // Check both PnL calculations
         int256 pnlWithoutFunding = perpEngine.getUnrealizedPnlZ(user);

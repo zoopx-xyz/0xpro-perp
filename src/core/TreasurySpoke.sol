@@ -13,7 +13,9 @@ contract TreasurySpoke is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     address public zUsdToken;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(address admin) external initializer {
         __AccessControl_init();
@@ -33,7 +35,7 @@ contract TreasurySpoke is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     }
 
     // Optional helper for tests: settlement bot transfers token first, then calls this (no-op)
-    function depositFromBot(address /*token*/, uint256 /*amount*/) external {
+    function depositFromBot(address, /*token*/ uint256 /*amount*/ ) external {
         // no-op in MVP; token should already be transferred to this contract
     }
 
@@ -45,7 +47,7 @@ contract TreasurySpoke is Initializable, AccessControlUpgradeable, UUPSUpgradeab
         require(splitter != address(0), "invalid splitter");
         require(amount > 0, "invalid amount");
         require(zUsdToken != address(0), "zUSD not set");
-        
+
         // Transfer zUSD to the fee splitter
         IERC20(zUsdToken).safeTransfer(splitter, amount);
         emit FeesForwarded(amount, splitter);
@@ -64,7 +66,8 @@ contract TreasurySpoke is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     function receivePenalty(address token, uint256 amount) external {
         // For MVP, funds should be transferred by caller before or after; this function can be used to signal receipt
         // No access control to simplify tests
-        (token); (amount);
+        (token);
+        (amount);
     }
 
     uint256[50] private __gap;
