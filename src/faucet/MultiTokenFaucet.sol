@@ -14,7 +14,7 @@ contract MultiTokenFaucet is Ownable, ReentrancyGuard {
 
     struct DropCfg {
         uint256 amount; // token base units to send per claim
-        bool enabled;   // whether dispensing is enabled for this token
+        bool enabled; // whether dispensing is enabled for this token
     }
 
     // token => drop config
@@ -76,8 +76,8 @@ contract MultiTokenFaucet is Ownable, ReentrancyGuard {
         return (next_, next_ - block.timestamp);
     }
 
-    /// @notice Dispense a single token drop to `to`. Only callable by owner (backend signer).
-    function dispense(address to, address token) public onlyOwner nonReentrant returns (uint256 sent) {
+    /// @dev Internal dispense without reentrancy guard to enable batch calls from a guarded entry.
+    function _dispense(address to, address token) internal returns (uint256 sent) {
         DropCfg memory cfg = drops[token];
         if (!cfg.enabled || cfg.amount == 0) return 0;
 
@@ -93,6 +93,11 @@ contract MultiTokenFaucet is Ownable, ReentrancyGuard {
         return cfg.amount;
     }
 
+    /// @notice Dispense a single token drop to `to`. Only callable by owner (backend signer).
+    function dispense(address to, address token) public onlyOwner nonReentrant returns (uint256 sent) {
+        return _dispense(to, token);
+    }
+
     /// @notice Batch dispense for a selection of tokens. Skips tokens in cooldown or disabled.
     function dispenseMany(address to, address[] calldata tokens)
         external
@@ -101,7 +106,7 @@ contract MultiTokenFaucet is Ownable, ReentrancyGuard {
         returns (uint256 tokensSent, uint256 totalAmount)
     {
         for (uint256 i = 0; i < tokens.length; i++) {
-            uint256 amt = dispense(to, tokens[i]);
+            uint256 amt = _dispense(to, tokens[i]);
             if (amt > 0) {
                 tokensSent++;
                 totalAmount += amt;
