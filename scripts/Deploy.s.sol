@@ -168,15 +168,15 @@ contract Deploy is Script {
         // Grant FORWARDER_ROLE on Treasury to PerpEngine
         ts.grantRole(keccak256("FORWARDER_ROLE"), address(pe));
 
-        // Optionally grant KEEPER role to relayers provided via environment variables
+        // Require RELAYER_1 and optionally grant KEEPER role to relayers provided via environment variables
         address relayer1 = vm.envAddress("RELAYER_1");
         address relayer2 = vm.envAddress("RELAYER_2");
         bytes32 KEEPER = Constants.KEEPER;
-        if (relayer1 != address(0)) {
-            pe.grantRole(KEEPER, relayer1);
-            console.log("Granted KEEPER to RELAYER_1");
-            console.logAddress(relayer1);
-        }
+        require(relayer1 != address(0), "RELAYER_1 not set");
+        pe.grantRole(KEEPER, relayer1);
+        console.log("Granted KEEPER to RELAYER_1");
+        console.logAddress(relayer1);
+
         if (relayer2 != address(0)) {
             pe.grantRole(KEEPER, relayer2);
             console.log("Granted KEEPER to RELAYER_2");

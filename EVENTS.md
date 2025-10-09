@@ -8,6 +8,39 @@ This document catalogs the key events emitted by the Perp MVP smart contracts fo
    - Emitted on every fill (recordFill or inline open/close).
    - `priceZ` and `feeZ` are denominated in zUSD 1e18.
 
+   - Note: The `OrderFilled` event now also includes a non-indexed `bytes32 orderDigest` as the last parameter. This field is a canonical digest computed off-chain by the matching/settlement system and included in the `Fill` payload passed to `recordFill`. The contract does not recompute or verify this digest; it merely emits it for auditability and indexing.
+
+   - Canonical orderDigest recipe (must be computed exactly as below by the off-chain system):
+
+```
+keccak256(abi.encode(
+  bytes32("ZOOPX_ORDER_V1"),
+  account,
+  marketId,
+  isBuy,
+  sizeRaw,
+  priceX18,
+  feeZ,
+  fundingZ,
+  tsOrExpiry,
+  clientOrderId
+))
+```
+
+   - Field explanations and types used in the encoding above:
+     - `bytes32("ZOOPX_ORDER_V1")`: domain/version marker to avoid cross-protocol collisions.
+     - `account` (address): user account paying/receiving the fill.
+     - `marketId` (bytes32): keccak256 market id string (e.g. keccak256("BTC-PERP")).
+     - `isBuy` (bool): true for buy (long/close-buy), false for sell.
+     - `sizeRaw` (uint256 / uint128): raw size in base units (the same units used in the `Fill.size` field).
+     - `priceX18` (uint256 / uint128): price denominated in zUSD scaled to 1e18 (same as `Fill.priceZ`).
+     - `feeZ` (uint256 / uint128): fee in zUSD scaled to 1e18 (same as `Fill.feeZ`).
+     - `fundingZ` (int128): funding component in zUSD scaled to 1e18 (same as `Fill.fundingZ`).
+     - `tsOrExpiry` (uint64): timestamp or expiry used by matcher for this order.
+     - `clientOrderId` (bytes32): optional client-provided id (use zero bytes32 if unused).
+
+   - Important: Keep type sizes consistent with the on-chain `Fill` structure when computing the digest (especially fixed-point scaling for price and fee). Use `abi.encode` (not `abi.encodePacked`) to match the canonical preimage layout above.
+
 2. `PositionUpdated(address account, bytes32 marketId, int256 newSize, uint128 entryPriceZ, int256 unrealizedPnlZ)`
    - Mirrors position mutation with post-update size and cached entry price.
    - `unrealizedPnlZ` is zero for opens/adds; populated for closes/liquidations.

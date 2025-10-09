@@ -27,6 +27,20 @@ contract PerpEngineRecordFillTest is Test {
     address keeper = address(0xBEEF);
     bytes32 constant MARKET = keccak256("BTC-PERP");
 
+    // Re-declare the OrderFilled event for vm.expectEmit matching
+    event OrderFilled(
+        address indexed account,
+        bytes32 indexed marketId,
+        bytes32 indexed fillId,
+        bool isBuy,
+        uint128 size,
+        uint128 priceZ,
+        uint128 feeZ,
+        int128 fundingZ,
+        int256 positionAfter,
+        bytes32 orderDigest
+    );
+
     function setUp() public {
         cm = CollateralManager(_proxy(address(new CollateralManager())));
         orac = OracleRouter(_proxy(address(new OracleRouter())));
@@ -90,18 +104,48 @@ contract PerpEngineRecordFillTest is Test {
     }
 
     function testRecordFillHappyPath() public {
+        // Compute canonical orderDigest per EVENTS.md and include it in the Fill
+        bytes32 domain = bytes32("ZOOPX_ORDER_V1");
+        bytes32 clientOrderId = bytes32(0);
+        uint256 sizeRaw = 1_000_000;
+        uint256 priceX18 = 1e18;
+        uint256 feeZ = 1_000_000;
+        int128 fundingZ = 0;
+        uint64 tsTimestamp = uint64(block.timestamp);
+
+        bytes32 canonical = keccak256(
+            abi.encode(
+                domain, address(this), MARKET, true, sizeRaw, priceX18, feeZ, fundingZ, tsTimestamp, clientOrderId
+            )
+        );
+
         IPerpEngine.Fill memory f = IPerpEngine.Fill({
             fillId: keccak256("fillX"),
             account: address(this),
             marketId: MARKET,
             isBuy: true,
-            size: 1_000_000, // arbitrary
-            priceZ: 1e18,
-            feeZ: 1_000_000, // 1 zUSD (6 decimals internal)
-            fundingZ: 0,
-            ts: uint64(block.timestamp),
-            orderDigest: keccak256("fillX")
+            size: uint128(sizeRaw), // arbitrary
+            priceZ: uint128(priceX18),
+            feeZ: uint128(feeZ), // 1 zUSD (6 decimals internal)
+            fundingZ: fundingZ,
+            ts: tsTimestamp,
+            orderDigest: canonical
         });
+
+        // Expect OrderFilled to be emitted with the same canonical digest
+        vm.expectEmit(true, true, false, true);
+        emit OrderFilled(
+            address(this),
+            MARKET,
+            f.fillId,
+            true,
+            f.size,
+            f.priceZ,
+            f.feeZ,
+            f.fundingZ,
+            int256(uint256(f.size)),
+            canonical
+        );
 
         engine.recordFill(f);
 

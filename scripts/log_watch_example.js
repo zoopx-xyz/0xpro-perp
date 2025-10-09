@@ -14,7 +14,7 @@ async function main() {
   const rpcUrl = rpcUrlArg;
   const engine = getAddress(engineArg);
 
-  const abiOrderFilled = parseAbiItem('event OrderFilled(address indexed account, bytes32 indexed marketId, bytes32 indexed fillId, bool isBuy, uint128 size, uint128 priceZ, uint128 feeZ, int128 fundingZ, int256 positionAfter)');
+  const abiOrderFilled = parseAbiItem('event OrderFilled(address indexed account, bytes32 indexed marketId, bytes32 indexed fillId, bool isBuy, uint128 size, uint128 priceZ, uint128 feeZ, int128 fundingZ, int256 positionAfter, bytes32 orderDigest)');
 
   const client = createPublicClient({ transport: http(rpcUrl) });
 
@@ -25,7 +25,7 @@ async function main() {
     event: abiOrderFilled,
     onLogs: (logs) => {
       for (const l of logs) {
-        const { account, marketId, fillId, isBuy, size, priceZ, feeZ, fundingZ, positionAfter } = l.args;
+        const { account, marketId, fillId, isBuy, size, priceZ, feeZ, fundingZ, positionAfter, orderDigest } = l.args;
         const normalized = {
           txHash: l.transactionHash,
           blockNumber: l.blockNumber,
@@ -37,6 +37,7 @@ async function main() {
           priceZ: priceZ.toString(),
           feeZ: feeZ.toString(),
           fundingZ: fundingZ.toString(),
+          orderDigest: orderDigest,
           positionAfter: positionAfter.toString(),
           isoTimestamp: new Date().toISOString()
         };
