@@ -11,6 +11,7 @@ library Constants {
     bytes32 public constant PRICE_KEEPER = keccak256("PRICE_KEEPER");
     bytes32 public constant ENGINE_ADMIN = keccak256("ENGINE_ADMIN");
     bytes32 public constant FORWARDER_ROLE = keccak256("FORWARDER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     // Fees (in bps)
     uint16 public constant MAKER_FEE_BPS_DEFAULT = 5;   // 0.05%

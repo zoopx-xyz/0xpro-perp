@@ -7,6 +7,7 @@ import "../src/core/OracleRouter.sol";
 import "../src/core/PerpEngine.sol";
 import "../src/core/interfaces/IPerpEngine.sol";
 import "../lib/Constants.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract OracleStalePriceRevertSimpleTest is Test {
     SignedPriceOracle oracle;
@@ -22,12 +23,14 @@ contract OracleStalePriceRevertSimpleTest is Test {
     function setUp() public {
         vm.startPrank(admin);
         
-        // Deploy simple implementations
-        oracle = new SignedPriceOracle();
-        oracle.initialize(admin, signer, uint64(MAX_STALE));
+    // Deploy via proxies to respect upgradeable initialize patterns
+    SignedPriceOracle oracleImpl = new SignedPriceOracle();
+    oracle = SignedPriceOracle(address(new ERC1967Proxy(address(oracleImpl), "")));
+    oracle.initialize(admin, signer, uint64(MAX_STALE));
         
-        router = new OracleRouter();
-        router.initialize(admin);
+    OracleRouter routerImpl = new OracleRouter();
+    router = OracleRouter(address(new ERC1967Proxy(address(routerImpl), "")));
+    router.initialize(admin);
         router.registerAdapter(mockBTC, address(oracle));
         
         // Grant roles
@@ -46,8 +49,9 @@ contract OracleStalePriceRevertSimpleTest is Test {
         assertEq(oracle.getMaxStale(), 600);
     }
 
-    function testFailSetMaxStaleByNonKeeper() public {
+    function test_RevertWhen_SetMaxStaleByNonKeeper() public {
         vm.prank(address(0x999));
+        vm.expectRevert();
         oracle.setMaxStale(600);
     }
 

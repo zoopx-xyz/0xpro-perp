@@ -1,0 +1,43 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: latest
+
+      - name: Install Node deps
+        run: npm install
+
+      - name: Build
+        run: forge build
+
+      - name: Test
+        run: forge test -vv
+
+      - name: Coverage
+        run: |
+          FOUNDRY_PROFILE=coverage forge coverage --report lcov --via-ir || FOUNDRY_PROFILE=coverage forge coverage --report lcov
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lcov.info
+          path: lcov.info
+
+      - name: Slither (optional)
+        if: always()
+        run: |
+          pip install slither-analyzer || echo "Skipping Slither install"
+          if command -v slither; then slither . --exclude solc-version || true; else echo "Slither not available"; fi

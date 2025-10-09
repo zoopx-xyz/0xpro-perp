@@ -9,6 +9,8 @@ import {Constants} from "../../lib/Constants.sol";
 
 contract FundingModule is Initializable, AccessControlUpgradeable, UUPSUpgradeable, IFundingModule {
     mapping(bytes32 => int128) public fundingIndex; // marketId => index
+    
+    event FundingUpdated(bytes32 indexed marketId, int128 index, int128 rate);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
@@ -24,6 +26,7 @@ contract FundingModule is Initializable, AccessControlUpgradeable, UUPSUpgradeab
 
     function updateFundingIndex(bytes32 marketId, int128 indexDelta) external override onlyRole(Constants.KEEPER) {
         fundingIndex[marketId] += indexDelta;
+        emit FundingUpdated(marketId, fundingIndex[marketId], indexDelta);
     }
 
     function getFundingIndex(bytes32 marketId) external view override returns (int128) {

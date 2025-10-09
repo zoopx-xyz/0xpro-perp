@@ -59,7 +59,7 @@ contract PerpEngineRecordFillTest is Test {
         spo.setPrice(address(z), 1e18, uint64(block.timestamp));
 
     // wire deps
-    engine.setDeps(address(risk), address(orac), address(cm), address(ts), address(fs), address(z));
+    engine.setDeps(address(risk), address(orac), address(cm), address(ts), address(fs), address(0), address(z));
     vault.setDeps(address(risk), address(orac), address(engine));
     vault.grantRole(keccak256("ENGINE"), address(engine));
     ts.grantRole(keccak256("FORWARDER_ROLE"), address(engine)); // Grant FORWARDER_ROLE

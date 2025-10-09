@@ -5,6 +5,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IMarginVault} from "./interfaces/IMarginVault.sol";
 import {ICollateralManager} from "./interfaces/ICollateralManager.sol";
@@ -15,7 +16,7 @@ import {Constants} from "../../lib/Constants.sol";
 
 /// @title MarginVaultV2
 /// @notice Multi-asset vault supporting cross and isolated balances; values normalized to 1e18 zUSD
-contract MarginVaultV2 is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, IMarginVault {
+contract MarginVaultV2 is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, IMarginVault {
     using SafeERC20 for IERC20;
 
     mapping(address => mapping(address => uint128)) public crossBalances; // user => asset => amount
@@ -39,8 +40,10 @@ contract MarginVaultV2 is Initializable, AccessControlUpgradeable, UUPSUpgradeab
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
+        __Pausable_init();
         _grantRole(Constants.DEFAULT_ADMIN, admin);
         _grantRole(Constants.ENGINE, admin);
+        _grantRole(Constants.PAUSER_ROLE, admin); // Grant pauser role to admin
         collateralManager = ICollateralManager(_collateralManager);
     }
 
@@ -52,7 +55,16 @@ contract MarginVaultV2 is Initializable, AccessControlUpgradeable, UUPSUpgradeab
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}
 
-    function deposit(address asset, uint256 amount, bool isolated, bytes32 marketId) external override nonReentrant {
+    // Pausable functions
+    function pause() external onlyRole(Constants.PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(Constants.PAUSER_ROLE) {
+        _unpause();
+    }
+
+    function deposit(address asset, uint256 amount, bool isolated, bytes32 marketId) external override nonReentrant whenNotPaused {
         require(amount > 0, "amount=0");
         IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
         if (isolated) {
@@ -63,7 +75,7 @@ contract MarginVaultV2 is Initializable, AccessControlUpgradeable, UUPSUpgradeab
         emit Deposit(msg.sender, asset, amount, isolated, marketId);
     }
 
-    function withdraw(address asset, uint256 amount, bool isolated, bytes32 marketId) external override nonReentrant {
+    function withdraw(address asset, uint256 amount, bool isolated, bytes32 marketId) external override nonReentrant whenNotPaused {
         require(amount > 0, "amount=0");
         if (isolated) {
             uint128 bal = isolatedBalances[msg.sender][marketId][asset];
@@ -127,6 +139,21 @@ contract MarginVaultV2 is Initializable, AccessControlUpgradeable, UUPSUpgradeab
             else total = 0;
         }
         return int256(total) + uPnl;
+    }
+
+    /// @inheritdoc IMarginVault
+    function getCrossBalance(address user, address asset) external view returns (uint128) {
+        return crossBalances[user][asset];
+    }
+
+    /// @inheritdoc IMarginVault
+    function penalize(address user, address asset, uint256 amount, address to) external onlyRole(Constants.ENGINE) {
+        require(to != address(0), "invalid to");
+        uint128 bal = crossBalances[user][asset];
+        require(bal >= amount, "insufficient");
+        crossBalances[user][asset] = bal - uint128(amount);
+        IERC20(asset).safeTransfer(to, amount);
+        // Does not modify reservedZ; penalty is taken from unlocked collateral.
     }
 
     function _hasSufficientEquityAfterChange(address user) internal view returns (bool) {

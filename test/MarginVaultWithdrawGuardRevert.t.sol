@@ -42,7 +42,7 @@ contract MarginVaultWithdrawGuardRevertTest is Test {
         cm.setAssetConfig(address(z), true, 10000, address(orac), 6);
         spo.setPrice(address(z), 1e18, uint64(block.timestamp));
 
-    engine.setDeps(address(risk), address(orac), address(cm), address(0), address(0), address(z));
+    engine.setDeps(address(risk), address(orac), address(cm), address(0), address(0), address(0), address(z));
     vault.setDeps(address(risk), address(orac), address(engine));
     vault.grantRole(keccak256("ENGINE"), address(engine));
     engine.registerMarket(MARKET, address(z), 6);

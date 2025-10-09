@@ -57,7 +57,7 @@ contract LiquidationFlowTest is Test {
     }
 
     function testLiquidationHappyPath() public {
-    engine.setDeps(address(risk), address(orac), address(cm), address(0), address(0), address(z));
+    engine.setDeps(address(risk), address(orac), address(cm), address(0), address(0), address(0), address(z));
     vault.setDeps(address(risk), address(orac), address(engine));
     vault.grantRole(keccak256("ENGINE"), address(engine));
         engine.registerMarket(MARKET, address(z), 6);

@@ -12,6 +12,7 @@ import "../src/tokens/MockzUSD.sol";
 import "../src/tokens/MockERC20.sol";
 import "../src/core/interfaces/IRiskConfig.sol";
 import "../lib/Constants.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract OracleStalePriceRevertTest is Test {
     SignedPriceOracle oracle;
@@ -38,23 +39,30 @@ contract OracleStalePriceRevertTest is Test {
         zUSD = new MockzUSD();
         mBTC = new MockERC20("Mock BTC", "mBTC", 8);
 
-        // Deploy core contracts (as implementations for direct testing)
-        oracle = new SignedPriceOracle();
-        oracle.initialize(admin, signer, uint64(MAX_STALE));
+    // Deploy via proxies to respect upgradeable initialize patterns
+    SignedPriceOracle oracleImpl = new SignedPriceOracle();
+    oracle = SignedPriceOracle(address(new ERC1967Proxy(address(oracleImpl), "")));
+    oracle.initialize(admin, signer, uint64(MAX_STALE));
 
-        router = new OracleRouter();
-        router.initialize(admin);
+    OracleRouter routerImpl = new OracleRouter();
+    router = OracleRouter(address(new ERC1967Proxy(address(routerImpl), "")));
+    router.initialize(admin);
         router.registerAdapter(address(mBTC), address(oracle));
 
-        collateralManager = new CollateralManager();
-        collateralManager.initialize(admin, address(router));
+    CollateralManager cmImpl = new CollateralManager();
+    collateralManager = CollateralManager(address(new ERC1967Proxy(address(cmImpl), "")));
+    collateralManager.initialize(admin, address(router));
         collateralManager.setAssetConfig(address(zUSD), true, 10000, address(router), 6);
+        // Register zUSD on the router and set its price to 1.0 to enable valuation in CollateralManager
+        router.registerAdapter(address(zUSD), address(oracle));
 
-        vault = new MarginVaultV2();
-        vault.initialize(admin, address(collateralManager));
+    MarginVaultV2 mvImpl = new MarginVaultV2();
+    vault = MarginVaultV2(address(new ERC1967Proxy(address(mvImpl), "")));
+    vault.initialize(admin, address(collateralManager));
 
-        riskConfig = new RiskConfig();
-        riskConfig.initialize(admin);
+    RiskConfig rcImpl = new RiskConfig();
+    riskConfig = RiskConfig(address(new ERC1967Proxy(address(rcImpl), "")));
+    riskConfig.initialize(admin);
         riskConfig.setMarketRisk(marketId, RiskConfig.MarketRisk({
             imrBps: 500,
             mmrBps: 250,
@@ -64,25 +72,29 @@ contract OracleStalePriceRevertTest is Test {
             maxLev: 20
         })); // 5% IMR, 2.5% MMR, 0.5% penalty
 
-        engine = new PerpEngine();
-        engine.initialize(admin, address(vault));
+    PerpEngine peImpl = new PerpEngine();
+    engine = PerpEngine(address(new ERC1967Proxy(address(peImpl), "")));
+    engine.initialize(admin, address(vault));
         engine.setDeps(
             address(riskConfig),
             address(router),
             address(collateralManager),
             address(0), // treasury
             address(0), // feeSplitter
+            address(0), // fundingModule
             address(zUSD)
         );
         engine.registerMarket(marketId, address(mBTC), 8, "BTC-PERP");
 
         // Grant roles
+    vault.grantRole(Constants.ENGINE, address(engine));
         engine.grantRole(Constants.KEEPER, keeper);
         oracle.grantRole(Constants.PRICE_KEEPER, keeper);
 
-        // Set initial price (fresh)
+    // Set initial price (fresh)
         vm.warp(1000);
         oracle.setPrice(address(mBTC), 50000e18, uint64(block.timestamp));
+    oracle.setPrice(address(zUSD), 1e18, uint64(block.timestamp));
 
         vm.stopPrank();
     }
@@ -93,8 +105,9 @@ contract OracleStalePriceRevertTest is Test {
         assertEq(oracle.getMaxStale(), 600);
     }
 
-    function testFailSetMaxStaleByNonKeeper() public {
+    function test_RevertWhen_SetMaxStaleByNonKeeper() public {
         vm.prank(user);
+        vm.expectRevert();
         oracle.setMaxStale(600);
     }
 
@@ -134,6 +147,14 @@ contract OracleStalePriceRevertTest is Test {
 
     function testRecordFillSucceedsOnFreshPrice() public {
         // Price is fresh from setUp
+        // Fund and deposit user collateral so reserve in recordFill can succeed
+        vm.prank(admin);
+        zUSD.mint(user, 10_000e6);
+        vm.startPrank(user);
+        zUSD.approve(address(vault), 10_000e6);
+        vault.deposit(address(zUSD), 10_000e6, false, bytes32(0));
+        vm.stopPrank();
+
         IPerpEngine.Fill memory fill = IPerpEngine.Fill({
             fillId: bytes32("test_fill_1"),
             account: user,

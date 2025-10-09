@@ -39,7 +39,7 @@ contract PerpEngineTest is Test {
         spo.setPrice(address(z), 1e18, uint64(block.timestamp));
 
     // wire
-    engine.setDeps(address(0), address(orac), address(cm), address(0), address(0), address(z));
+    engine.setDeps(address(0), address(orac), address(cm), address(0), address(0), address(0), address(z));
     engine.registerMarket(MARKET, address(z), 6);
     }
 

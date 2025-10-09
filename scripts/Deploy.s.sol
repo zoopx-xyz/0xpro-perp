@@ -79,7 +79,7 @@ contract Deploy is Script {
         mf.initialize(admin);
 
     // Wire dependencies
-    pe.setDeps(address(rc), address(orac), address(cm), address(ts), address(fs), address(z));
+    pe.setDeps(address(rc), address(orac), address(cm), address(ts), address(fs), address(fm), address(z));
     mv.setDeps(address(rc), address(orac), address(pe));
     
     // Configure zUSD token for treasury and fee splitter
