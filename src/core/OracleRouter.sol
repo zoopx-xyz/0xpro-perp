@@ -5,7 +5,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IOracleRouter} from "./interfaces/IOracleRouter.sol";
-import {SignedPriceOracle} from "./SignedPriceOracle.sol";
+import {IPriceAdapter} from "./interfaces/IPriceAdapter.sol";
 import {Constants} from "../../lib/Constants.sol";
 
 /// @title OracleRouter
@@ -40,14 +40,14 @@ contract OracleRouter is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     function getPriceInZUSD(address asset) external view override returns (uint256 priceX1e18, bool isStale) {
         address o = adapters[asset].oracle;
         require(o != address(0), "no adapter");
-        (uint256 px, uint64 ts, bool stale) = SignedPriceOracle(o).getPrice(asset);
+        (uint256 px, uint64 ts, bool stale) = IPriceAdapter(o).getPrice(asset);
         return (px, stale);
     }
 
     function getPriceAndStale(address asset) external view returns (uint256 priceX1e18, bool isStale) {
         address o = adapters[asset].oracle;
         require(o != address(0), "no adapter");
-        (uint256 px, uint64 ts, bool stale) = SignedPriceOracle(o).getPrice(asset);
+        (uint256 px, uint64 ts, bool stale) = IPriceAdapter(o).getPrice(asset);
         return (px, stale);
     }
 

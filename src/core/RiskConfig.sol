@@ -22,15 +22,11 @@ contract RiskConfig is Initializable, AccessControlUpgradeable, UUPSUpgradeable 
     event MarketRiskSet(bytes32 indexed marketId, MarketRisk risk);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    constructor() { _disableInitializers(); }
 
     function initialize(address admin) external initializer {
-        __AccessControl_init();
-        __UUPSUpgradeable_init();
-        _grantRole(Constants.DEFAULT_ADMIN, admin);
-        _grantRole(Constants.RISK_ADMIN, admin);
+        __AccessControl_init(); __UUPSUpgradeable_init();
+        _grantRole(Constants.DEFAULT_ADMIN, admin); _grantRole(Constants.RISK_ADMIN, admin);
     }
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}

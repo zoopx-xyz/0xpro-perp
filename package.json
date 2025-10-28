@@ -4,14 +4,10 @@
   "private": true,
   "scripts": {
     "build": "hardhat compile",
-    "verify:chain20": "hardhat run scripts/verify-all.ts --network kadena_chain20",
-    "verify:map": "hardhat run scripts/verify-from-map.ts --network kadena_chain20",
-    "print:config": "hardhat print-config --chainweb testnet",
-    "check:chain": "hardhat run scripts/check-chain.ts --network kadena_chain20"
+    "print:config": "hardhat compile"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
-    "@kadena/hardhat-chainweb": "^1.5.1",
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@openzeppelin/contracts": "^4.9.6",
     "@openzeppelin/contracts-upgradeable": "^4.9.6",

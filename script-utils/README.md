@@ -1,4 +1,4 @@
-# On-chain Smoke Test (Chainweb EVM testnet chain 20)
+# On-chain Smoke Test
 
 This script opens and closes a tiny BTC-PERP position against the deployed MVP.
 
@@ -7,7 +7,8 @@ Prereqs:
 - pnpm or npm
 - Environment:
   - RELAYER_PRIVATE_KEY (same funded key used for deployment)
-  - RPC_5920 (optional; defaults to Chainweb testnet chain 20 RPC)
+  - RPC_URL (RPC endpoint of the target chain)
+  - DEPLOY_JSON (path to deployments JSON file with addresses)
 
 Setup:
 
@@ -24,15 +25,15 @@ Run:
 ```bash
 # export your env
 export RELAYER_PRIVATE_KEY=0x...
-# optional
-export RPC_5920=https://api.chainweb.com/chainweb/0.0/testnet04/chain/20/evm
+export RPC_URL=https://your.rpc.endpoint
+export DEPLOY_JSON=./deployments/<your_deployments>.json
 
 # execute
-npx ts-node smoke.ts
+DEPLOY_JSON=$DEPLOY_JSON RPC_URL=$RPC_URL RELAYER_PRIVATE_KEY=$RELAYER_PRIVATE_KEY npx ts-node smoke.ts
 ```
 
 What it does:
-- Reads `deployments/5920.json`
+- Reads a deployments file for the target chain (via DEPLOY_JSON)
 - Uses zUSD to deposit into `MarginVaultV2`
 - Opens a 2x long on BTC-PERP using 100 zUSD collateral
 - Fetches position + margin ratio, then closes the position

@@ -72,4 +72,57 @@ contract PerpEngineTest is Test {
         vm.expectRevert(bytes("dup fillId"));
         engine.recordFill(f);
     }
+
+    function testGetPositionMarginRatio_NoPositionReturnsMax() public {
+        // No position for this account -> expect max uint
+        uint256 mr = engine.getPositionMarginRatioBps(address(this), MARKET);
+        assertEq(mr, type(uint256).max);
+    }
+
+    function testGetPositionMarginRatio_StalePriceReturnsZero() public {
+        // Open a small position via recordFill, then warp to make price stale
+        IPerpEngine.Fill memory f = IPerpEngine.Fill({
+            fillId: keccak256("fill-stale"),
+            account: address(this),
+            marketId: MARKET,
+            isBuy: true,
+            size: 1e6,
+            priceZ: 1e18,
+            feeZ: 0,
+            fundingZ: 0,
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("fill-stale")
+        });
+        engine.recordFill(f);
+        // Make price stale (SignedPriceOracle maxStale=300 in setUp)
+        vm.warp(block.timestamp + 301);
+        uint256 mr = engine.getPositionMarginRatioBps(address(this), MARKET);
+        assertEq(mr, 0);
+    }
+
+    function testGetPositionMarginRatio_PositiveEquity() public {
+        // Deposit collateral to have positive equity
+        z.mint(address(this), 1_000_000); // 1 z (6 decimals)
+        z.approve(address(vault), type(uint256).max);
+        vault.deposit(address(z), 1_000_000, false, bytes32(0));
+
+        // Open a small position so denominator (notional) > 0
+        IPerpEngine.Fill memory f = IPerpEngine.Fill({
+            fillId: keccak256("fill-pos"),
+            account: address(this),
+            marketId: MARKET,
+            isBuy: true,
+            size: 1e6,
+            priceZ: 1e18,
+            feeZ: 0,
+            fundingZ: 0,
+            ts: uint64(block.timestamp),
+            orderDigest: keccak256("fill-pos")
+        });
+        engine.recordFill(f);
+
+        uint256 mr = engine.getPositionMarginRatioBps(address(this), MARKET);
+        // With $1 equity and $1 notional, expect ~10000 bps (allow exact equality)
+        assertEq(mr, 10_000);
+    }
 }

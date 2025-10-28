@@ -4,11 +4,13 @@ set -euo pipefail
 # Seed MultiTokenFaucet with extra amounts needed for 25k testers.
 # Requires: cast, jq, RPC, FAUCET, and PK (owner private key) in environment.
 
-RPC="${RPC:-https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/20/evm/rpc}"
+RPC="${RPC:?set RPC endpoint for target chain in RPC}"
 FAUCET="${FAUCET:?set faucet address in FAUCET}"
-PK="${PK:?set owner private key in PK}"
+# Support RELAYER_PRIVATE_KEY as a fallback for PK
+PK="${PK:-${RELAYER_PRIVATE_KEY:-}}"
+: "${PK:?set owner private key in PK or RELAYER_PRIVATE_KEY}"
 
-DEPLOY_JSON="${DEPLOY_JSON:-deployments/5920.json}"
+DEPLOY_JSON="${DEPLOY_JSON:?path to deployments JSON for target chain}"
 
 token_addr() { jq -r "$1" "$DEPLOY_JSON"; }
 
@@ -27,6 +29,28 @@ MUSD1=$(token_addr '.tokens.mUSD1')
 
 echo "Seeding faucet at $FAUCET using RPC=$RPC"
 
+# Derive sender address from PK and verify ownership of tokens to mint
+SENDER=$(cast wallet address --private-key "$PK")
+echo "Using sender $SENDER"
+
+require_owner() {
+  local token=$1; local sym=$2
+  local owner
+  owner=$(cast call "$token" 'owner()(address)' --rpc-url "$RPC")
+  if [[ "${owner,,}" != "${SENDER,,}" ]]; then
+    echo "ERROR: $sym owner $owner != sender $SENDER"
+    exit 1
+  fi
+}
+
+require_owner "$MKDA" "mKDA"
+require_owner "$MPOL" "mPOL"
+require_owner "$MZPX" "mZPX"
+require_owner "$MUSDC" "mUSDC"
+require_owner "$MUSDT" "mUSDT"
+require_owner "$MPYUSD" "mPYUSD"
+require_owner "$MUSD1" "mUSD1"
+
 mint() {
   local token=$1; local amount=$2
   echo "mint $amount to faucet from token $token"
@@ -35,7 +59,7 @@ mint() {
 
 # Extras beyond initial 1,000,000 minted in Deploy.s.sol
 # mKDA +124,000,000 @ 12d
-mint "$MKDA" $((124000000 * 10**12))
+mint "$MKDA" 124000000000000000000
 # mPOL +124,000,000 @ 18d
 mint "$MPOL" 124000000000000000000000000
 # mZPX +124,000,000 @ 18d

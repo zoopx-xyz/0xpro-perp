@@ -2,13 +2,18 @@ import { ethers } from "ethers";
 import fs from "fs";
 
 async function main() {
-  const deploy = JSON.parse(fs.readFileSync("./deployments/5920.json", "utf8"));
-  const RPC = process.env.RPC_5920 || "https://api.chainweb.com/chainweb/0.0/testnet04/chain/20/evm";
+  const DEPLOY_JSON = process.env.DEPLOY_JSON || "";
+  if (!DEPLOY_JSON) {
+    throw new Error("DEPLOY_JSON env var required (path to deployments JSON)");
+  }
+  const RPC = process.env.RPC_URL || "";
+  if (!RPC) throw new Error("RPC_URL missing in env");
   const pkRaw = (process.env.RELAYER_PRIVATE_KEY || "").trim();
-  const pk = pkRaw.startsWith("0x") ? pkRaw : `0x${pkRaw}`;
+  const pk = pkRaw ? (pkRaw.startsWith("0x") ? pkRaw : `0x${pkRaw}`) : "";
   if (!pk) throw new Error("RELAYER_PRIVATE_KEY missing in env");
 
-  const provider = new ethers.JsonRpcProvider(RPC, { chainId: 5920, name: "kadena-evm-testnet-chain20" });
+  const deploy = JSON.parse(fs.readFileSync(DEPLOY_JSON, "utf8"));
+  const provider = new ethers.JsonRpcProvider(RPC);
   const wallet = new ethers.Wallet(pk, provider);
   console.log("Using", await wallet.getAddress());
 
@@ -51,8 +56,6 @@ async function main() {
 
   // 2) Deposit some zUSD into vault (cross)
   const depositToken = 1_000n * 10n ** BigInt(zDec); // 1000 zUSD
-  // No need to approve vault since it pulls token in deposit
-  // But we do need to hold zUSD; mocks minted to deployer in the script
   // Ensure balance
   const bal = (await zUsd.balanceOf(wallet.address)) as bigint;
   if (bal < depositToken) throw new Error(`Not enough zUSD balance: have ${bal}, need ${depositToken}`);

@@ -13,14 +13,10 @@ contract FundingModule is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     event FundingUpdated(bytes32 indexed marketId, int128 index, int128 rate);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    constructor() { _disableInitializers(); }
 
     function initialize(address admin) external initializer {
-        __AccessControl_init();
-        __UUPSUpgradeable_init();
-        _grantRole(Constants.DEFAULT_ADMIN, admin);
+        __AccessControl_init(); __UUPSUpgradeable_init(); _grantRole(Constants.DEFAULT_ADMIN, admin);
         _grantRole(Constants.KEEPER, admin);
     }
 

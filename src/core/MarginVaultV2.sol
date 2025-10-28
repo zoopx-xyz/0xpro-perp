@@ -28,6 +28,8 @@ contract MarginVaultV2 is
 
     mapping(address => mapping(address => uint128)) public crossBalances; // user => asset => amount
     mapping(address => mapping(bytes32 => mapping(address => uint128))) public isolatedBalances; // user => market => asset => amount
+    // Assets that can only be withdrawn via bridge flow (no local token transfer)
+    mapping(address => bool) public bridgedOnlyAsset;
 
     ICollateralManager public collateralManager;
     IRiskConfig public riskConfig; // optional wiring for MMR
@@ -39,6 +41,8 @@ contract MarginVaultV2 is
 
     event Deposit(address indexed user, address indexed asset, uint256 amount, bool isolated, bytes32 marketId);
     event Withdraw(address indexed user, address indexed asset, uint256 amount, bool isolated, bytes32 marketId);
+    event CreditBridged(address indexed user, address indexed asset, uint256 amount, bytes32 indexed depositId);
+    event DebitBridged(address indexed user, address indexed asset, uint256 amount, bytes32 indexed withdrawalId);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -63,6 +67,11 @@ contract MarginVaultV2 is
         riskConfig = IRiskConfig(_riskConfig);
         oracleRouter = IOracleRouter(_oracleRouter);
         perpEngine = IPerpEngine(_perpEngine);
+    }
+
+    /// @notice Configure whether an asset is withdrawable only via bridge flow
+    function setBridgedOnlyAsset(address asset, bool value) external onlyRole(Constants.DEFAULT_ADMIN) {
+        bridgedOnlyAsset[asset] = value;
     }
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}
@@ -99,6 +108,7 @@ contract MarginVaultV2 is
         whenNotPaused
     {
         require(amount > 0, "amount=0");
+        require(!bridgedOnlyAsset[asset], "bridged-only: use bridge withdraw");
         if (isolated) {
             uint128 bal = isolatedBalances[msg.sender][marketId][asset];
             require(bal >= amount, "insufficient");
@@ -200,6 +210,34 @@ contract MarginVaultV2 is
         // reduce reserved by amount and credit cross zUSD as unlocked (we just lower reservedZ)
         if (reservedZ[user] >= releaseZ) reservedZ[user] -= releaseZ;
         else reservedZ[user] = 0;
+    }
+
+    /// @notice Mint credit for a user as a result of a verified bridge deposit (no token transfer on this chain)
+    function mintCreditFromBridge(address user, address asset, uint256 amount, bytes32 depositId)
+        external
+        onlyRole(Constants.BRIDGE_ROLE)
+        nonReentrant
+    {
+        require(user != address(0), "user=0");
+        require(amount > 0, "amount=0");
+        crossBalances[user][asset] += uint128(amount);
+        emit CreditBridged(user, asset, amount, depositId);
+    }
+
+    /// @notice Burn credit for a user for a bridge withdrawal (no token transfer on this chain)
+    function burnCreditForBridge(address user, address asset, uint256 amount, bytes32 withdrawalId)
+        external
+        onlyRole(Constants.BRIDGE_ROLE)
+        nonReentrant
+    {
+        require(user != address(0), "user=0");
+        require(amount > 0, "amount=0");
+        uint128 bal = crossBalances[user][asset];
+        require(bal >= amount, "insufficient");
+        crossBalances[user][asset] = bal - uint128(amount);
+        // Equity/MMR guard after debit
+        require(_hasSufficientEquityAfterChange(user), "MarginVault: insufficient equity after debit");
+        emit DebitBridged(user, asset, amount, withdrawalId);
     }
 
     uint256[50] private __gap;

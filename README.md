@@ -1,6 +1,6 @@
-## Perp MVP (Kadena EVM Testnet)
+## Perp MVP
 
-Contracts and tests for a Perp-only Hub+Spoke MVP targeting Kadena EVM testnet.
+Contracts and tests for a Perp-only Hub+Spoke MVP.
 
 Key features:
 - UUPS upgradeable modules (Vault, Engine, Oracles, Risk, Funding, Treasury)
@@ -22,7 +22,7 @@ forge test
 ## Deploy (MVP)
 
 ```sh
-forge script scripts/Deploy.s.sol --broadcast --rpc-url <Kadena RPC>
+forge script scripts/Deploy.s.sol --broadcast --rpc-url <RPC_URL>
 ```
 
 ## Defaults

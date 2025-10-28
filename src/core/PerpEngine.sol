@@ -225,10 +225,7 @@ contract PerpEngine is
             feeSplitter.splitFees(uint256(f.feeZ));
         }
 
-        emit OrderFilled(
-            f.account, f.marketId, f.fillId, f.isBuy, f.size, f.priceZ, f.feeZ, f.fundingZ, newS, f.orderDigest
-        );
-        emit PositionUpdated(f.account, f.marketId, newS, f.priceZ, 0);
+        _emitFillAndPosition(f, newS, 0);
     }
 
     // Internal helper to reserve initial margin; isolated to reduce variable footprint of recordFill (coverage stack depth workaround)
@@ -297,22 +294,8 @@ contract PerpEngine is
         }
         if (s == 0 && newS != 0) _openMarketsByAccount[f.account].push(f.marketId);
         _reserveInitialMargin(f, m);
-        emit OrderFilled(
-            f.account, f.marketId, f.fillId, f.isBuy, f.size, f.priceZ, f.feeZ, f.fundingZ, newS, f.orderDigest
-        );
-        emit PositionUpdated(f.account, f.marketId, newS, f.priceZ, 0);
-        emit TradeExecuted(
-            f.account,
-            f.marketId,
-            m.symbol,
-            isLong,
-            uint256(f.size),
-            leverageX,
-            mark,
-            0,
-            collateralZToken,
-            block.timestamp
-        );
+        _emitFillAndPosition(f, newS, 0);
+        _emitTradeExecuted(f.account, f.marketId, m.symbol, isLong, uint256(f.size), leverageX, mark, 0, collateralZToken);
     }
 
     function closePosition(bytes32 marketId) external nonReentrant {
@@ -358,11 +341,8 @@ contract PerpEngine is
             uint256 releaseTokenAmt = MathUtils.z18ToToken(releaseZ, zDecs2);
             vault.release(f.account, address(zUsd), releaseTokenAmt, false, bytes32(0));
         }
-        emit OrderFilled(
-            f.account, f.marketId, f.fillId, f.isBuy, f.size, f.priceZ, f.feeZ, f.fundingZ, 0, f.orderDigest
-        );
-        emit PositionUpdated(f.account, f.marketId, 0, f.priceZ, pnl);
-        emit TradeExecuted(msg.sender, marketId, m.symbol, !isLong, uint256(f.size), 0, 0, mark, 0, block.timestamp);
+    _emitFillAndPosition(f, 0, pnl);
+    _emitTradeExecuted(msg.sender, marketId, m.symbol, !isLong, uint256(f.size), 0, 0, mark, 0);
     }
 
     function updatePositionMargin(bytes32, /*marketId*/ uint256 /*additionalCollateralToken*/ ) external {
@@ -397,29 +377,9 @@ contract PerpEngine is
         (uint256 mark, bool stale) = oracleRouter.getPriceInZUSD(m.base);
         require(!stale, "stale price");
         uint256 closedNotionalZ = MathUtils.notionalZFromSize(closedSize, m.baseDecimals, mark);
-        uint16 pbps = IRiskConfig(riskConfig).getLiqPenaltyBps(marketId);
-        uint256 penaltyZ = (closedNotionalZ * pbps) / 10_000;
-        if (address(zUsd) != address(0) && address(treasury) != address(0) && penaltyZ > 0) {
-            (,,, uint8 zDecsPen) = collateralManager.config(address(zUsd));
-            uint256 penaltyTokenAmt = MathUtils.z18ToToken(penaltyZ, zDecsPen);
-            uint128 crossBal = vault.getCrossBalance(account, address(zUsd));
-            if (crossBal >= penaltyTokenAmt) {
-                IMarginVault(address(vault)).penalize(account, address(zUsd), penaltyTokenAmt, address(treasury));
-                treasury.receivePenalty(penaltyTokenAmt);
-            } else if (crossBal > 0) {
-                IMarginVault(address(vault)).penalize(account, address(zUsd), crossBal, address(treasury));
-                treasury.receivePenalty(crossBal);
-                penaltyZ = MathUtils.tokenToZ18(crossBal, zDecsPen);
-            } else {
-                penaltyZ = 0;
-            }
-        }
-        // release reserved margin broadly (approximate: release equal to IMR at mark)
-        uint16 imrBps = IRiskConfig(riskConfig).getIMRBps(marketId);
-        uint256 releaseZ = (closedNotionalZ * imrBps) / 10_000;
-        (,,, uint8 zDecs2) = collateralManager.config(address(zUsd));
-        uint256 releaseTokenAmt = MathUtils.z18ToToken(releaseZ, zDecs2);
-        vault.release(account, address(zUsd), releaseTokenAmt, false, bytes32(0));
+        uint256 penaltyZ = _computeAndApplyPenalty(account, marketId, closedNotionalZ);
+    // release reserved margin broadly (approximate: release equal to IMR at mark)
+    uint256 releaseZ = _releaseReservedMargin(account, marketId, closedNotionalZ);
 
         // Prune zero position from open markets list
         _pruneZeroPosition(account, marketId);
@@ -464,11 +424,27 @@ contract PerpEngine is
         require(!stale, "stale price");
 
         uint256 closedNotionalZ = MathUtils.notionalZFromSize(closeSize, m.baseDecimals, mark);
+        uint256 penaltyZ = _computeAndApplyPenalty(account, marketId, closedNotionalZ);
+
+        // Release reserved margin proportionally
+    uint256 releaseZ = _releaseReservedMargin(account, marketId, closedNotionalZ);
+
+        emit PartialLiquidation(
+            account, marketId, uint128(closeSize), uint128(mark), uint128(penaltyZ), uint128(remainingSize)
+        );
+        emit PositionLiquidated(account, marketId, closeSize, releaseZ, penaltyZ, block.timestamp);
+    }
+
+    // Extracted helper to compute and apply liquidation penalty; reduces local variables in liquidatePartial
+    function _computeAndApplyPenalty(address account, bytes32 marketId, uint256 closedNotionalZ)
+        internal
+        returns (uint256 penaltyZ)
+    {
         uint16 pbps = IRiskConfig(riskConfig).getLiqPenaltyBps(marketId);
-        uint256 penaltyZ = (closedNotionalZ * pbps) / 10_000;
+        penaltyZ = (closedNotionalZ * pbps) / 10_000;
         if (address(zUsd) != address(0) && address(treasury) != address(0) && penaltyZ > 0) {
-            (,,, uint8 zDecsPen2) = collateralManager.config(address(zUsd));
-            uint256 penaltyTokenAmt = MathUtils.z18ToToken(penaltyZ, zDecsPen2);
+            (,,, uint8 zDecsPen) = collateralManager.config(address(zUsd));
+            uint256 penaltyTokenAmt = MathUtils.z18ToToken(penaltyZ, zDecsPen);
             uint128 crossBal = vault.getCrossBalance(account, address(zUsd));
             if (crossBal >= penaltyTokenAmt) {
                 IMarginVault(address(vault)).penalize(account, address(zUsd), penaltyTokenAmt, address(treasury));
@@ -476,23 +452,23 @@ contract PerpEngine is
             } else if (crossBal > 0) {
                 IMarginVault(address(vault)).penalize(account, address(zUsd), crossBal, address(treasury));
                 treasury.receivePenalty(crossBal);
-                penaltyZ = MathUtils.tokenToZ18(crossBal, zDecsPen2);
+                penaltyZ = MathUtils.tokenToZ18(crossBal, zDecsPen);
             } else {
                 penaltyZ = 0;
             }
         }
+    }
 
-        // Release reserved margin proportionally
+    // Helper to release reserved margin given closed notional and market IMR
+    function _releaseReservedMargin(address account, bytes32 marketId, uint256 closedNotionalZ)
+        internal
+        returns (uint256 releaseZ)
+    {
         uint16 imrBps = IRiskConfig(riskConfig).getIMRBps(marketId);
-        uint256 releaseZ = (closedNotionalZ * imrBps) / 10_000;
+        releaseZ = (closedNotionalZ * imrBps) / 10_000;
         (,,, uint8 zDecs2) = collateralManager.config(address(zUsd));
         uint256 releaseTokenAmt = MathUtils.z18ToToken(releaseZ, zDecs2);
         vault.release(account, address(zUsd), releaseTokenAmt, false, bytes32(0));
-
-        emit PartialLiquidation(
-            account, marketId, uint128(closeSize), uint128(mark), uint128(penaltyZ), uint128(remainingSize)
-        );
-        emit PositionLiquidated(account, marketId, closeSize, releaseZ, penaltyZ, block.timestamp);
     }
 
     // Internal function to remove market from open markets list when position becomes zero
@@ -546,32 +522,31 @@ contract PerpEngine is
         int256 total;
         bytes32[] memory ms = _openMarketsByAccount[account];
         for (uint256 i = 0; i < ms.length; i++) {
-            bytes32 mid = ms[i];
-            int256 s = positions[account][mid];
-            if (s == 0) continue;
-            MarketMeta memory m = markets[mid];
-            (uint256 px, bool stale) = oracleRouter.getPriceInZUSD(m.base);
-            if (stale) continue;
-            uint128 ep = entryPriceZ[account][mid];
-            uint256 notionalMark = MathUtils.notionalZFromSize(uint256(s > 0 ? s : -s), m.baseDecimals, px);
-            uint256 notionalEntry = MathUtils.notionalZFromSize(uint256(s > 0 ? s : -s), m.baseDecimals, uint256(ep));
-            int256 pnl = int256(notionalMark) - int256(notionalEntry);
-            if (s < 0) pnl = -pnl;
-
-            // Add funding accrued
-            if (address(fundingModule) != address(0)) {
-                int128 currentFundingIndex = fundingModule.getFundingIndex(mid);
-                int128 positionFundingSnapshot = positionFundingIndex[account][mid];
-                int128 fundingDelta = currentFundingIndex - positionFundingSnapshot;
-                // Positive funding means longs pay shorts.
-                // Apply negative sign so longs (s>0) decrease PnL when fundingDelta > 0, shorts increase.
-                int256 fundingAccrued = -int256(fundingDelta) * s / 1e18; // 1e18 scaling
-                pnl += fundingAccrued;
-            }
-
-            total += pnl;
+            (int256 pnl, bool ok) = _pnlWithFundingFor(account, ms[i]);
+            if (ok) total += pnl;
         }
         return total;
+    }
+
+    function _pnlWithFundingFor(address account, bytes32 mid) internal view returns (int256 pnl, bool ok) {
+        int256 s = positions[account][mid];
+        if (s == 0) return (0, false);
+        MarketMeta memory m = markets[mid];
+        (uint256 px, bool stale) = oracleRouter.getPriceInZUSD(m.base);
+        if (stale) return (0, false);
+        uint128 ep = entryPriceZ[account][mid];
+        uint256 notionalMark = MathUtils.notionalZFromSize(uint256(s > 0 ? s : -s), m.baseDecimals, px);
+        uint256 notionalEntry = MathUtils.notionalZFromSize(uint256(s > 0 ? s : -s), m.baseDecimals, uint256(ep));
+        pnl = int256(notionalMark) - int256(notionalEntry);
+        if (s < 0) pnl = -pnl;
+        if (address(fundingModule) != address(0)) {
+            int128 currentFundingIndex = fundingModule.getFundingIndex(mid);
+            int128 positionFundingSnapshot = positionFundingIndex[account][mid];
+            int128 fundingDelta = currentFundingIndex - positionFundingSnapshot;
+            int256 fundingAccrued = -int256(fundingDelta) * s / 1e18; // 1e18 scaling
+            pnl += fundingAccrued;
+        }
+        return (pnl, true);
     }
 
     function getPosition(address account, bytes32 marketId) public view returns (int256) {
@@ -580,6 +555,39 @@ contract PerpEngine is
 
     function getOpenMarketsForAccount(address account) external view returns (bytes32[] memory) {
         return _openMarketsByAccount[account];
+    }
+
+    // Internal emit helper to reduce local stack pressure in instrumented builds
+    function _emitFillAndPosition(IPerpEngine.Fill memory f, int256 newS, int256 pnl) internal {
+        emit OrderFilled(
+            f.account, f.marketId, f.fillId, f.isBuy, f.size, f.priceZ, f.feeZ, f.fundingZ, newS, f.orderDigest
+        );
+        emit PositionUpdated(f.account, f.marketId, newS, f.priceZ, pnl);
+    }
+
+    function _emitTradeExecuted(
+        address user,
+        bytes32 marketId,
+        string memory symbol,
+        bool isLong,
+        uint256 amountBase,
+        uint256 leverageX,
+        uint256 entryPriceZ,
+        uint256 exitPriceZ,
+        uint256 collateralUsedToken
+    ) internal {
+        emit TradeExecuted(
+            user,
+            marketId,
+            symbol,
+            isLong,
+            amountBase,
+            leverageX,
+            entryPriceZ,
+            exitPriceZ,
+            collateralUsedToken,
+            block.timestamp
+        );
     }
 
     uint256[50] private __gap;

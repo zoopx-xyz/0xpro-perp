@@ -46,7 +46,7 @@ keccak256(abi.encode(
    - `unrealizedPnlZ` is zero for opens/adds; populated for closes/liquidations.
 
 3. `Liquidation(address account, bytes32 marketId, uint128 closedSize, uint128 priceZ, uint128 penaltyZ)`
-   - Full liquidation of a position. Penalty transfer currently deferred (TODO) but amount is computed.
+   - Full liquidation of a position. Penalty is computed on closed notional and transferred from the user's vault cross-balance to the `TreasurySpoke` via `MarginVaultV2.penalize`. A `PenaltyReceived` signal is emitted by the treasury.
 
 4. `PartialLiquidation(address account, bytes32 marketId, uint128 closedSize, uint128 priceZ, uint128 penaltyZ, uint128 remainingSize)`
    - Partial liquidation leaving a residual position; prunes market if remainingSize == 0.
@@ -64,6 +64,12 @@ keccak256(abi.encode(
 
 2. `Withdraw(address user, address asset, uint256 amount, bool isolated, bytes32 marketId)`
    - Emits after equity/MMR guard passes.
+
+3. `CreditBridged(address user, address asset, uint256 amount, bytes32 depositId)`
+   - Emitted when the base-chain vault credits cross-margin balance for a user as a result of a verified bridge deposit message.
+
+4. `DebitBridged(address user, address asset, uint256 amount, bytes32 withdrawalId)`
+   - Emitted when the base-chain vault debits cross-margin balance for a user as part of a cross-chain withdrawal flow.
 
 ## FundingModule.sol
 
@@ -98,13 +104,27 @@ keccak256(abi.encode(
 1. `AssetConfigSet(address asset, bool enabled, uint16 ltvBps, address oracle, uint8 decimals)`
    - Collateral asset registration or update.
 
+## BridgeAdapter.sol (base chain)
+
+1. `BridgeCreditReceived(address user, address asset, uint256 amount, bytes32 depositId, bytes32 srcChain)`
+   - A verified message was processed and the vault credited the user's cross balance.
+
+2. `BridgeWithdrawalInitiated(address user, address asset, uint256 amount, bytes32 withdrawalId, bytes32 dstChain)`
+   - A user initiated a cross-chain withdrawal; the vault debited their cross balance and an off-chain message should be sent to the satellite chain.
+
+## EscrowGateway.sol (satellite chain)
+
+1. `DepositEscrowed(address user, address asset, uint256 amount, bytes32 depositId, bytes32 dstChain)`
+   - The gateway received tokens from the user and emitted a deposit intent destined for the base chain.
+
+2. `WithdrawalReleased(address user, address asset, uint256 amount, bytes32 withdrawalId)`
+   - The gateway released escrowed tokens to the user after a verified base-chain burn/withdrawal message.
+
 ## Indexing Tips
 
 - Use `PositionUpdated` combined with `OrderFilled` to reconstruct per-trade PnL and position state transitions.
-- Liquidation events include penalty amount even though transfer is deferred; downstream risk dashboards can treat penalty as realized loss placeholder.
+- Liquidation events include penalty amount, and the transfer to Treasury is executed via `MarginVaultV2.penalize`; downstream risk dashboards can treat penalty as realized loss at liquidation time.
 - Funding accrual is implicit in position PnL via `getUnrealizedPnlZWithFunding`; only index `FundingUpdated` for historical funding rates chart.
 - To build an account timeline: order by block/time across `Deposit`, `Withdraw`, `OrderFilled`, `Liquidation`, `PartialLiquidation` and `FundingUpdated`.
 
-## Deferred / TODO
-
-- Penalty transfer in liquidation events is not yet executed; will require safe deduction path from vault to treasury. Track issue in verification report.
+<!-- No deferred items for events at this time. -->

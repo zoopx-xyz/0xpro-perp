@@ -32,20 +32,13 @@ contract SignedPriceOracle is Initializable, AccessControlUpgradeable, UUPSUpgra
     event MaxStaleSet(uint64 maxStale);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    constructor() { _disableInitializers(); }
 
     function initialize(address admin, address _signer, uint64 _maxStale) external initializer {
-        __AccessControl_init();
-        __UUPSUpgradeable_init();
-        __EIP712_init("SignedPriceOracle", "1");
-        _grantRole(Constants.DEFAULT_ADMIN, admin);
-        _grantRole(Constants.PRICE_KEEPER, admin);
-        signer = _signer;
-        maxStale = _maxStale == 0 ? Constants.DEFAULT_MAX_STALE : _maxStale;
-        emit SignerSet(_signer);
-        emit MaxStaleSet(maxStale);
+        __AccessControl_init(); __UUPSUpgradeable_init(); __EIP712_init("SignedPriceOracle", "1");
+        _grantRole(Constants.DEFAULT_ADMIN, admin); _grantRole(Constants.PRICE_KEEPER, admin);
+        signer = _signer; maxStale = _maxStale == 0 ? Constants.DEFAULT_MAX_STALE : _maxStale;
+        emit SignerSet(_signer); emit MaxStaleSet(maxStale);
     }
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}

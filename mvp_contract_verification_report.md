@@ -1,7 +1,7 @@
 # Perp MVP Contract Verification Report
 
 Date: 2025-10-09
-Chain Target: Kadena EVM (Chain 20 / chainId=5920)
+Chain Target: EVM-compatible (chain-agnostic)
 Solidity: ^0.8.24
 
 ## Scope
@@ -18,7 +18,7 @@ This report covers the readiness of the Perp MVP smart contracts including:
 ## Summary
 All 58 unit and scenario tests pass, plus 2 invariant tests. Critical safety features (price staleness checks, margin reservation, MMR-based liquidation gating, pausing, idempotent fills, pruning of zero positions) are implemented and validated. Integration smoke script (`Smoke.s.sol`) exercises end-to-end open/close flow.
 
-Deferred item: liquidations compute penalty but do not yet transfer penalty funds (marked TODO). Risk and accounting semantics tolerate this for MVP but production deployment should finalize penalty flow.
+Liquidation penalty transfer is implemented. On liquidation, the penalty is deducted from user collateral and transferred to Treasury via `MarginVaultV2.penalize`. A focused unit test verifies Treasury balance increase and IMR release.
 
 ## Test Matrix
 - Engine position opens/closes (openPosition/closePosition)
@@ -84,18 +84,16 @@ Maker/Taker Fee Parameters:
 - Oracle staleness enforced everywhere price is consumed for settlement or valuation.
 
 ## Known Gaps / TODOs
-1. Penalty Transfer: Liquidation penalty not deducted from user collateral nor credited to treasury; implement safe path via vault (reserve then move) or direct balance mutation.
-2. Funding Settlement Realization: Funding currently implicit unrealized; periodic settlement into collateral balances could improve transparency.
-3. Slippage / Price Impact: recordFill assumes external fill price validity; no internal oracle TWAP or price banding.
-4. Multi-collateral Diversification: reservedZ treated as a single bucket; per-market isolation of reserved margin may be desirable.
-5. Event Backfill: PositionUpdated unrealizedPnlZ set to zero on opens/adds; optional improvement to include running unrealized PnL.
+1. Funding Settlement Realization: Funding currently implicit unrealized; periodic settlement into collateral balances could improve transparency.
+2. Slippage / Price Impact: recordFill assumes external fill price validity; no internal oracle TWAP or price banding.
+3. Multi-collateral Diversification: reservedZ treated as a single bucket; per-market isolation of reserved margin may be desirable.
+4. Event Backfill: PositionUpdated unrealizedPnlZ set to zero on opens/adds; optional improvement to include running unrealized PnL.
 
 ## Recommended Next Steps
-- Implement and test penalty transfer logic (unit + integration test verifying treasury balance increase).
 - Add slippage guard or max deviation parameter in recordFill/openPosition to mitigate off-mark fills.
 - Extend invariants to cover: sum(notional * MMRbps) == computeAccountMMRZ; funding index monotonically moves only via keeper updates.
 - Run static analysis (Slither) and fix flagged findings (unused variables, unbounded loops with external input, shadowing).
-- Integrate continuous deployment script with chain-specific config (chainId=5920). Include smoke simulation.
+- Integrate continuous deployment script with explicit config for target chain. Include smoke simulation.
 
 ## Deployment Checklist
 - Deploy implementation contracts and proxies.
@@ -103,7 +101,7 @@ Maker/Taker Fee Parameters:
 - Register adapters and set initial prices.
 - Configure markets and risk parameters.
 - Set fee recipients and treasury zUSD token address.
-- Verify EIP-712 domain parameters (chainId=5920) for oracle signatures (if used).
+- Verify EIP-712 domain parameters (name, version, chainId) for oracle signatures (if used).
 
 ## Appendix: Key Functions
 - PerpEngine.recordFill(Fill): idempotent fill processing + margin reservation + funding snapshot
@@ -125,11 +123,11 @@ Maker/Taker Fee Parameters:
 | accountEquityZUSD | Implemented | Includes unrealized PnL (without funding in vault) |
 | PerpEngine | Implemented | open/close, recordFill, pruning |
 | recordFill idempotent | Implemented | seenFill mapping + test |
-| Liquidation (full) | Implemented | Penalty computed (transfer TODO) |
+| Liquidation (full) | Implemented | Penalty computed and transferred to Treasury |
 | Partial Liquidation | Implemented | Remaining position update + pruning |
 | FundingModule | Implemented | Index update, integration into PnL |
 | RiskConfig | Implemented | Market risk params + fee bps |
-| TreasurySpoke | Implemented | Fees forwarding; penalty receive placeholder |
+| TreasurySpoke | Implemented | Fees forwarding; receives penalty via vault.penalize |
 | FeeSplitterSpoke | Implemented | Custom recipient splits tested |
 | Pausable | Implemented | Engine & Vault; role gated |
 | ReentrancyGuard | Implemented | Engine & Vault critical flows |
@@ -139,7 +137,7 @@ Maker/Taker Fee Parameters:
 | E2E Smoke | Implemented | `Smoke.s.sol` script |
 | Events Catalog | Implemented | `EVENTS.md` |
 | Log Watch Script | Implemented | `scripts/log_watch_example.js` |
-| Penalty Transfer | Missing (Deferred) | Documented remediation |
+| Penalty Transfer | Implemented | Executed via vault.penalize; unit test present |
 | Slippage Guard | Missing (Deferred) | Potential improvement |
 | Funding Settlement Realization | Missing (Deferred) | Unrealized only |
 
@@ -180,7 +178,7 @@ Coverage run not executed in this session (foundry profile not yet invoked). CI 
 | AssetConfigSet | asset | enabled,ltvBps,oracle,decimals | Collateral registration |
 
 ## Final Assessment
-Verdict: READY FOR MVP (with documented deferred items)
-Blocking Items: None for MVP scope. Penalty transfer marked as high-priority follow-up before production but not blocking internal MVP verification.
-Recommended Pre-Launch Remediations: Implement penalty transfer, run full coverage & Slither, add slippage guard, extend invariants.
+Verdict: READY FOR MVP (with minor deferred items)
+Blocking Items: None for MVP scope.
+Recommended Pre-Launch Remediations: Run full coverage & Slither, add slippage guard, extend invariants.
 

@@ -12,6 +12,10 @@ library Constants {
     bytes32 public constant ENGINE_ADMIN = keccak256("ENGINE_ADMIN");
     bytes32 public constant FORWARDER_ROLE = keccak256("FORWARDER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    // Cross-chain bridge roles
+    bytes32 public constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
+    bytes32 public constant MESSAGE_SENDER_ROLE = keccak256("MESSAGE_SENDER_ROLE");
+    bytes32 public constant MESSAGE_RECEIVER_ROLE = keccak256("MESSAGE_RECEIVER_ROLE");
 
     // Fees (in bps)
     uint16 public constant MAKER_FEE_BPS_DEFAULT = 5;   // 0.05%
@@ -25,4 +29,7 @@ library Constants {
     uint256 public constant PRICE_DECIMALS = 1e18; // prices normalized to 1e18 zUSD
     uint256 public constant INTERNAL_DECIMALS = 1e18; // internal zUSD units
     uint64 public constant DEFAULT_MAX_STALE = 300; // 300 seconds
+
+    // OP Superchain interop: L2ToL2CrossDomainMessenger predeploy (consistent across superchain chains)
+    address public constant OP_L2L2_MESSENGER_PREDEPLOY = 0x4200000000000000000000000000000000000023;
 }

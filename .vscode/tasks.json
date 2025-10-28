@@ -2,10 +2,11 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "forge-smoke-5920",
+			"label": "Run Foundry tests with coverage (IR-minimum)",
 			"type": "shell",
-			"command": "forge script scripts/Smoke.s.sol:Smoke --rpc-url ${input:rpc5920} --broadcast --via-ir --sig run() --slow --legacy",
+			"command": "pnpm -s test:cov:irmin",
 			"args": [],
+			"isBackground": false,
 			"problemMatcher": [
 				"$tsc"
 			]
