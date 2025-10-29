@@ -14,12 +14,18 @@ import {Constants} from "../../../lib/Constants.sol";
 
 /// @title OpL2L2Receiver
 /// @notice Receiver for OP Superchain L2-to-L2 messages; dispatches to BridgeAdapter or EscrowGateway
-contract OpL2L2Receiver is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract OpL2L2Receiver is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable
+{
     IL2ToL2CrossDomainMessenger public messenger;
     address public remoteSender; // Expected xDomainMessageSender
     IBridgeAdapter public bridgeAdapter; // base chain component
-    EscrowGateway public escrowGateway;  // satellite chain component
-    AssetMapper public assetMapper;      // mapping of assets per chain domain
+    EscrowGateway public escrowGateway; // satellite chain component
+    AssetMapper public assetMapper; // mapping of assets per chain domain
 
     // replay protection
     mapping(bytes32 => bool) public processed;
@@ -97,19 +103,21 @@ contract OpL2L2Receiver is Initializable, AccessControlUpgradeable, UUPSUpgradea
         bytes32 mid = keccak256(abi.encodePacked("dep", srcChain, depositId));
         require(!processed[mid], "replayed");
         processed[mid] = true;
-        address baseAsset = address(assetMapper) == address(0) ? address(0) : assetMapper.getBaseAsset(srcChain, satelliteAsset);
+        address baseAsset =
+            address(assetMapper) == address(0) ? address(0) : assetMapper.getBaseAsset(srcChain, satelliteAsset);
         require(baseAsset != address(0), "asset mapping missing");
         bridgeAdapter.creditFromMessage(user, baseAsset, amount, depositId, srcChain);
         emit MessageProcessed(mid, this.onDepositMessage.selector);
     }
 
     // Base -> Satellite: release withdrawal
-    function onWithdrawalMessage(address user, address satelliteAsset, uint256 amount, bytes32 withdrawalId, bytes32 srcChain)
-        external
-        onlyMessenger
-        nonReentrant
-        whenNotPaused
-    {
+    function onWithdrawalMessage(
+        address user,
+        address satelliteAsset,
+        uint256 amount,
+        bytes32 withdrawalId,
+        bytes32 srcChain
+    ) external onlyMessenger nonReentrant whenNotPaused {
         require(messenger.xDomainMessageSender() == remoteSender, "bad xSender");
         bytes32 mid = keccak256(abi.encodePacked("wd", srcChain, withdrawalId));
         require(!processed[mid], "replayed");

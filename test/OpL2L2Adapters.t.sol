@@ -18,7 +18,9 @@ contract MockL2ToL2Messenger is IL2ToL2CrossDomainMessenger {
     address public lastTarget;
     bytes public lastMessage;
 
-    function setXSender(address s) external { _xSender = s; }
+    function setXSender(address s) external {
+        _xSender = s;
+    }
 
     function sendMessage(address target, bytes calldata message, uint32 /*minGasLimit*/ ) external {
         lastTarget = target;
@@ -43,9 +45,15 @@ contract MockVault is IBridgeableVault {
     bytes32 public lastId;
 
     function mintCreditFromBridge(address user, address asset, uint256 amount, bytes32 depositId) external {
-        lastUser = user; lastAsset = asset; lastAmount = amount; lastId = depositId;
+        lastUser = user;
+        lastAsset = asset;
+        lastAmount = amount;
+        lastId = depositId;
     }
-    function burnCreditForBridge(address /*user*/, address /*asset*/, uint256 /*amount*/, bytes32 /*withdrawalId*/) external {}
+
+    function burnCreditForBridge(address, /*user*/ address, /*asset*/ uint256, /*amount*/ bytes32 /*withdrawalId*/ )
+        external
+    {}
 }
 
 contract OpL2L2AdaptersTest is Test {
@@ -68,26 +76,38 @@ contract OpL2L2AdaptersTest is Test {
     function setUp() public {
         messenger = new MockL2ToL2Messenger();
 
-    OpL2L2Sender sImpl = new OpL2L2Sender();
-    bytes memory sInit = abi.encodeWithSelector(OpL2L2Sender.initialize.selector, admin, address(messenger), address(0), 1_000_000);
-    sender = OpL2L2Sender(address(new ERC1967Proxy(address(sImpl), sInit)));
+        OpL2L2Sender sImpl = new OpL2L2Sender();
+        bytes memory sInit =
+            abi.encodeWithSelector(OpL2L2Sender.initialize.selector, admin, address(messenger), address(0), 1_000_000);
+        sender = OpL2L2Sender(address(new ERC1967Proxy(address(sImpl), sInit)));
 
-    OpL2L2Receiver rImpl = new OpL2L2Receiver();
-    bytes memory rInit = abi.encodeWithSelector(OpL2L2Receiver.initialize.selector, admin, address(messenger), address(sender));
-    receiver = OpL2L2Receiver(address(new ERC1967Proxy(address(rImpl), rInit)));
+        OpL2L2Receiver rImpl = new OpL2L2Receiver();
+        bytes memory rInit =
+            abi.encodeWithSelector(OpL2L2Receiver.initialize.selector, admin, address(messenger), address(sender));
+        receiver = OpL2L2Receiver(address(new ERC1967Proxy(address(rImpl), rInit)));
 
-    // wire sender remote receiver now that receiver exists
-    sender.setRemoteReceiver(address(receiver));
+        // wire sender remote receiver now that receiver exists
+        sender.setRemoteReceiver(address(receiver));
 
-    AssetMapper mImpl = new AssetMapper();
-    mapper = AssetMapper(address(new ERC1967Proxy(address(mImpl), abi.encodeWithSelector(AssetMapper.initialize.selector, admin))));
+        AssetMapper mImpl = new AssetMapper();
+        mapper = AssetMapper(
+            address(new ERC1967Proxy(address(mImpl), abi.encodeWithSelector(AssetMapper.initialize.selector, admin)))
+        );
 
         vault = new MockVault();
-    BridgeAdapter bImpl = new BridgeAdapter();
-    bridge = BridgeAdapter(address(new ERC1967Proxy(address(bImpl), abi.encodeWithSelector(BridgeAdapter.initialize.selector, admin, address(vault)))));
+        BridgeAdapter bImpl = new BridgeAdapter();
+        bridge = BridgeAdapter(
+            address(
+                new ERC1967Proxy(
+                    address(bImpl), abi.encodeWithSelector(BridgeAdapter.initialize.selector, admin, address(vault))
+                )
+            )
+        );
 
-    EscrowGateway eImpl = new EscrowGateway();
-    escrow = EscrowGateway(address(new ERC1967Proxy(address(eImpl), abi.encodeWithSelector(EscrowGateway.initialize.selector, admin))));
+        EscrowGateway eImpl = new EscrowGateway();
+        escrow = EscrowGateway(
+            address(new ERC1967Proxy(address(eImpl), abi.encodeWithSelector(EscrowGateway.initialize.selector, admin)))
+        );
 
         // Roles: grant receiver permission to call bridge and escrow on message processing
         vm.startPrank(admin);
@@ -129,14 +149,14 @@ contract OpL2L2AdaptersTest is Test {
         messenger.sendMessage(address(receiver), payload, 0);
 
         // Bridge should have minted to user with base asset
-    assertEq(vault.lastUser(), user);
-    assertEq(vault.lastAsset(), baseToken);
-    assertEq(vault.lastAmount(), amount);
-    assertEq(vault.lastId(), depId);
+        assertEq(vault.lastUser(), user);
+        assertEq(vault.lastAsset(), baseToken);
+        assertEq(vault.lastAmount(), amount);
+        assertEq(vault.lastId(), depId);
 
-    // Replay should revert when called again via messenger
-    vm.expectRevert(bytes("replayed"));
-    messenger.sendMessage(address(receiver), payload, 0);
+        // Replay should revert when called again via messenger
+        vm.expectRevert(bytes("replayed"));
+        messenger.sendMessage(address(receiver), payload, 0);
     }
 
     function testReceiverOnDepositOnlyMessenger() public {
@@ -153,17 +173,22 @@ contract OpL2L2AdaptersTest is Test {
         sender.sendWithdrawal(user, baseToken, amount, keccak256("wd1"), chain);
 
         // Sender should have sent message to receiver with mapped satellite asset
-    assertEq(messenger.lastTarget(), address(receiver));
+        assertEq(messenger.lastTarget(), address(receiver));
 
         // After message execution, escrow should have released tokens to user
-    assertEq(satToken.balanceOf(user), amount);
+        assertEq(satToken.balanceOf(user), amount);
     }
 
     function testReceiverWithdrawalBadSenderReverts() public {
         // Set spoofed xDomain sender and call via messenger
         messenger.setXSender(address(0xDEAD));
         bytes memory payload = abi.encodeWithSignature(
-            "onWithdrawalMessage(address,address,uint256,bytes32,bytes32)", user, address(satToken), 1 ether, keccak256("w"), chain
+            "onWithdrawalMessage(address,address,uint256,bytes32,bytes32)",
+            user,
+            address(satToken),
+            1 ether,
+            keccak256("w"),
+            chain
         );
         vm.expectRevert(bytes("bad xSender"));
         messenger.sendMessage(address(receiver), payload, 0);

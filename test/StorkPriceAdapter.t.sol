@@ -12,16 +12,24 @@ contract MockStork is IStork {
     int256 public value;
     uint64 public timestamp;
 
-    function set(int256 v, uint64 t, bool rv) external { value = v; timestamp = t; shouldRevert = rv; }
+    function set(int256 v, uint64 t, bool rv) external {
+        value = v;
+        timestamp = t;
+        shouldRevert = rv;
+    }
 
     function getTemporalNumericValueV1(bytes32) external view returns (StorkStructs.TemporalNumericValue memory) {
         if (shouldRevert) revert("stale");
-        return StorkStructs.TemporalNumericValue({ value: value, timestamp: timestamp });
+        return StorkStructs.TemporalNumericValue({value: value, timestamp: timestamp});
     }
 
-    function getTemporalNumericValueUnsafeV1(bytes32) external view returns (StorkStructs.TemporalNumericValue memory) {
+    function getTemporalNumericValueUnsafeV1(bytes32)
+        external
+        view
+        returns (StorkStructs.TemporalNumericValue memory)
+    {
         if (shouldRevert) revert("stale");
-        return StorkStructs.TemporalNumericValue({ value: value, timestamp: timestamp });
+        return StorkStructs.TemporalNumericValue({value: value, timestamp: timestamp});
     }
 }
 
@@ -32,9 +40,15 @@ contract StorkPriceAdapterTest is Test {
     address asset = address(0xA);
 
     function setUp() public {
-    stork = new MockStork();
-    StorkPriceAdapter impl = new StorkPriceAdapter();
-    adapter = StorkPriceAdapter(address(new ERC1967Proxy(address(impl), abi.encodeWithSelector(StorkPriceAdapter.initialize.selector, admin, address(stork)))));
+        stork = new MockStork();
+        StorkPriceAdapter impl = new StorkPriceAdapter();
+        adapter = StorkPriceAdapter(
+            address(
+                new ERC1967Proxy(
+                    address(impl), abi.encodeWithSelector(StorkPriceAdapter.initialize.selector, admin, address(stork))
+                )
+            )
+        );
     }
 
     function testSetFeedAndGetPriceNormalization() public {

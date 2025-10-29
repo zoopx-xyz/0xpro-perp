@@ -15,12 +15,18 @@ import {Constants} from "../../../lib/Constants.sol";
 /// @notice Receiver for Via Labs router-delivered cross-chain messages; dispatches to BridgeAdapter or EscrowGateway
 /// Security model: This contract gates by a trusted router address and checks a configured expectedRemoteSender
 /// which must be enforced by the router's own origin authentication on the destination chain.
-contract ViaReceiver is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
-    address public router;              // Trusted Via router on this chain
+contract ViaReceiver is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable
+{
+    address public router; // Trusted Via router on this chain
     address public expectedRemoteSender; // Expected source-side sender app (e.g., ViaMessageSender proxy on source chain)
     IBridgeAdapter public bridgeAdapter; // Base chain component
-    EscrowGateway public escrowGateway;  // Satellite chain component
-    AssetMapper public assetMapper;      // Mapping of assets per chain domain
+    EscrowGateway public escrowGateway; // Satellite chain component
+    AssetMapper public assetMapper; // Mapping of assets per chain domain
 
     // replay protection (per unique deposit/withdrawal id + chain domain)
     mapping(bytes32 => bool) public processed;
@@ -95,7 +101,8 @@ contract ViaReceiver is Initializable, AccessControlUpgradeable, UUPSUpgradeable
         bytes32 mid = keccak256(abi.encodePacked("dep", srcChain, depositId));
         require(!processed[mid], "replayed");
         processed[mid] = true;
-        address baseAsset = address(assetMapper) == address(0) ? address(0) : assetMapper.getBaseAsset(srcChain, satelliteAsset);
+        address baseAsset =
+            address(assetMapper) == address(0) ? address(0) : assetMapper.getBaseAsset(srcChain, satelliteAsset);
         require(baseAsset != address(0), "asset mapping missing");
         bridgeAdapter.creditFromMessage(user, baseAsset, amount, depositId, srcChain);
         emit MessageProcessed(mid, this.onDepositMessage.selector);

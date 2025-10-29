@@ -26,7 +26,12 @@ contract RiskConfigUUPSTest is Test {
         proxyCfg.upgradeTo(address(newImpl));
         // set and get market risk
         RiskConfig.MarketRisk memory r = RiskConfig.MarketRisk({
-            imrBps: 1000, mmrBps: 500, liqPenaltyBps: 50, makerFeeBps: 1, takerFeeBps: 2, maxLev: 50
+            imrBps: 1000,
+            mmrBps: 500,
+            liqPenaltyBps: 50,
+            makerFeeBps: 1,
+            takerFeeBps: 2,
+            maxLev: 50
         });
         bytes32 mid = keccak256("BTC-PERP");
         proxyCfg.setMarketRisk(mid, r);

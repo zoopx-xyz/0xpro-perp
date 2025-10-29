@@ -8,7 +8,10 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 contract MockL2ToL2Messenger3 is IL2ToL2CrossDomainMessenger {
     function sendMessage(address, bytes calldata, uint32) external {}
-    function xDomainMessageSender() external view returns (address) { return address(0); }
+
+    function xDomainMessageSender() external view returns (address) {
+        return address(0);
+    }
 }
 
 contract OpL2L2SenderUUPSTest is Test {
@@ -20,7 +23,8 @@ contract OpL2L2SenderUUPSTest is Test {
         messenger = new MockL2ToL2Messenger3();
         impl = new OpL2L2Sender();
         // Use minGas=0 to exercise defaulting logic to 1_000_000
-        bytes memory init = abi.encodeWithSelector(OpL2L2Sender.initialize.selector, address(this), address(messenger), address(0x1), 0);
+        bytes memory init =
+            abi.encodeWithSelector(OpL2L2Sender.initialize.selector, address(this), address(messenger), address(0x1), 0);
         sender = OpL2L2Sender(address(new ERC1967Proxy(address(impl), init)));
     }
 

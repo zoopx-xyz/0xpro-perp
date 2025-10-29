@@ -26,7 +26,8 @@ contract MarketFactoryTest is Test {
 
     function testCreateMarket() public {
         bytes32 id = keccak256("BTC-PERP");
-        MarketFactory.MarketParams memory p = MarketFactory.MarketParams({base: address(0xBEEF), baseDecimals: 8, quoteDecimals: 18});
+        MarketFactory.MarketParams memory p =
+            MarketFactory.MarketParams({base: address(0xBEEF), baseDecimals: 8, quoteDecimals: 18});
         vm.expectEmit(true, true, true, true);
         emit MarketFactory.MarketCreated(id, address(0xBEEF), 8, 18);
         factory.createMarket(id, address(0xBEEF), 8, 18, p);
@@ -38,7 +39,8 @@ contract MarketFactoryTest is Test {
 
     function testCreateMarketOnlyAdmin() public {
         bytes32 id = keccak256("ETH-PERP");
-        MarketFactory.MarketParams memory p = MarketFactory.MarketParams({base: address(0xCAFE), baseDecimals: 18, quoteDecimals: 18});
+        MarketFactory.MarketParams memory p =
+            MarketFactory.MarketParams({base: address(0xCAFE), baseDecimals: 18, quoteDecimals: 18});
         vm.prank(address(0xBAD));
         vm.expectRevert();
         factory.createMarket(id, address(0xCAFE), 18, 18, p);
@@ -53,7 +55,8 @@ contract MarketFactoryTest is Test {
 
     function testMarketsMapping() public {
         bytes32 id = keccak256("SOL-PERP");
-        MarketFactory.MarketParams memory p = MarketFactory.MarketParams({base: address(0x999), baseDecimals: 9, quoteDecimals: 6});
+        MarketFactory.MarketParams memory p =
+            MarketFactory.MarketParams({base: address(0x999), baseDecimals: 9, quoteDecimals: 6});
         factory.createMarket(id, address(0x999), 9, 6, p);
         (address base, uint8 bd, uint8 qd) = factory.markets(id);
         assertEq(base, address(0x999));

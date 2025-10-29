@@ -9,7 +9,9 @@ import {IL2ToL2CrossDomainMessenger} from "../src/bridge/op/IL2ToL2CrossDomainMe
 contract MockL2ToL2Messenger is IL2ToL2CrossDomainMessenger {
     address private _xSender;
 
-    function setXSender(address s) external { _xSender = s; }
+    function setXSender(address s) external {
+        _xSender = s;
+    }
 
     function sendMessage(address target, bytes calldata message, uint32 /*minGasLimit*/ ) external {
         (bool ok, bytes memory ret) = target.call(message);
@@ -33,11 +35,11 @@ contract OpL2L2MessengerExampleTest is Test {
     address user = address(0xBEEF);
 
     function setUp() public {
-    messenger = new MockL2ToL2Messenger();
-    // Deploy sender first (remote receiver will be set after receiver is deployed)
-    sender = new ExampleL2ToL2Sender(address(messenger), address(0), 1_000_000);
-    receiver = new ExampleL2ToL2Receiver(address(messenger), address(sender));
-    sender.setRemoteReceiver(address(receiver));
+        messenger = new MockL2ToL2Messenger();
+        // Deploy sender first (remote receiver will be set after receiver is deployed)
+        sender = new ExampleL2ToL2Sender(address(messenger), address(0), 1_000_000);
+        receiver = new ExampleL2ToL2Receiver(address(messenger), address(sender));
+        sender.setRemoteReceiver(address(receiver));
     }
 
     function testPingSuccess() public {

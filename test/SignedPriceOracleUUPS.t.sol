@@ -16,7 +16,8 @@ contract SignedPriceOracleUUPSTest is Test {
     function setUp() public {
         (signer, signerPk) = makeAddrAndKey("signer");
         impl = new SignedPriceOracle();
-        bytes memory initData = abi.encodeWithSelector(SignedPriceOracle.initialize.selector, admin, signer, uint64(3600));
+        bytes memory initData =
+            abi.encodeWithSelector(SignedPriceOracle.initialize.selector, admin, signer, uint64(3600));
         proxyOracle = SignedPriceOracle(address(new ERC1967Proxy(address(impl), initData)));
     }
 
@@ -40,16 +41,12 @@ contract SignedPriceOracleUUPSTest is Test {
         bytes32 typehash = proxyOracle.PRICE_TYPEHASH();
         bytes32 structHash = keccak256(abi.encode(typehash, asset, px, ts, nonce));
         // build EIP712 domain separator
-        bytes32 EIP712_DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+        bytes32 EIP712_DOMAIN_TYPEHASH =
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
         bytes32 nameHash = keccak256(bytes("SignedPriceOracle"));
         bytes32 versionHash = keccak256(bytes("1"));
-        bytes32 domainSeparator = keccak256(abi.encode(
-            EIP712_DOMAIN_TYPEHASH,
-            nameHash,
-            versionHash,
-            block.chainid,
-            address(proxyOracle)
-        ));
+        bytes32 domainSeparator =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, nameHash, versionHash, block.chainid, address(proxyOracle)));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
         bytes memory sig = abi.encodePacked(r, s, v);

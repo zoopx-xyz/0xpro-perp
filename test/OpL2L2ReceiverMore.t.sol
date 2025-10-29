@@ -19,9 +19,16 @@ contract MockVaultR is IBridgeableVault {
 
 contract MockMessengerR is IL2ToL2CrossDomainMessenger {
     address private _xSender;
-    function setXSender(address s) external { _xSender = s; }
+
+    function setXSender(address s) external {
+        _xSender = s;
+    }
+
     function sendMessage(address, bytes calldata, uint32) external {}
-    function xDomainMessageSender() external view returns (address) { return _xSender; }
+
+    function xDomainMessageSender() external view returns (address) {
+        return _xSender;
+    }
 }
 
 contract OpL2L2ReceiverMoreTest is Test {
@@ -31,34 +38,47 @@ contract OpL2L2ReceiverMoreTest is Test {
     BridgeAdapter bridge;
     EscrowGateway escrow;
     MockVaultR vault;
-    
+
     address admin = address(this);
     address sender = address(0x123);
 
     function setUp() public {
         messenger = new MockMessengerR();
         vault = new MockVaultR();
-        
+
         // Deploy receiver
         OpL2L2Receiver rImpl = new OpL2L2Receiver();
-        receiver = OpL2L2Receiver(address(new ERC1967Proxy(address(rImpl), 
-            abi.encodeWithSelector(OpL2L2Receiver.initialize.selector, admin, address(messenger), sender))));
-        
+        receiver = OpL2L2Receiver(
+            address(
+                new ERC1967Proxy(
+                    address(rImpl),
+                    abi.encodeWithSelector(OpL2L2Receiver.initialize.selector, admin, address(messenger), sender)
+                )
+            )
+        );
+
         // Deploy mapper
         AssetMapper mImpl = new AssetMapper();
-        mapper = AssetMapper(address(new ERC1967Proxy(address(mImpl), 
-            abi.encodeWithSelector(AssetMapper.initialize.selector, admin))));
-        
+        mapper = AssetMapper(
+            address(new ERC1967Proxy(address(mImpl), abi.encodeWithSelector(AssetMapper.initialize.selector, admin)))
+        );
+
         // Deploy bridge
         BridgeAdapter bImpl = new BridgeAdapter();
-        bridge = BridgeAdapter(address(new ERC1967Proxy(address(bImpl), 
-            abi.encodeWithSelector(BridgeAdapter.initialize.selector, admin, address(vault)))));
-        
+        bridge = BridgeAdapter(
+            address(
+                new ERC1967Proxy(
+                    address(bImpl), abi.encodeWithSelector(BridgeAdapter.initialize.selector, admin, address(vault))
+                )
+            )
+        );
+
         // Deploy escrow
         EscrowGateway eImpl = new EscrowGateway();
-        escrow = EscrowGateway(address(new ERC1967Proxy(address(eImpl), 
-            abi.encodeWithSelector(EscrowGateway.initialize.selector, admin))));
-        
+        escrow = EscrowGateway(
+            address(new ERC1967Proxy(address(eImpl), abi.encodeWithSelector(EscrowGateway.initialize.selector, admin)))
+        );
+
         // Grant roles
         bridge.grantRole(Constants.MESSAGE_RECEIVER_ROLE, address(receiver));
         escrow.grantRole(Constants.MESSAGE_RECEIVER_ROLE, address(receiver));
@@ -69,26 +89,26 @@ contract OpL2L2ReceiverMoreTest is Test {
         vm.expectEmit(true, false, false, true);
         emit OpL2L2Receiver.BridgeAdapterSet(address(bridge));
         receiver.setBridgeAdapter(address(bridge));
-        
+
         vm.expectEmit(true, false, false, true);
         emit OpL2L2Receiver.EscrowGatewaySet(address(escrow));
         receiver.setEscrowGateway(address(escrow));
-        
+
         vm.expectEmit(true, false, false, true);
         emit OpL2L2Receiver.AssetMapperSet(address(mapper));
         receiver.setAssetMapper(address(mapper));
-        
+
         // set messenger and remote sender
         address newMessenger = address(0xDEAD);
         vm.expectEmit(true, false, false, true);
         emit OpL2L2Receiver.MessengerSet(newMessenger);
         receiver.setMessenger(newMessenger);
-        
+
         address newRemote = address(0xBEEF);
         vm.expectEmit(true, false, false, true);
         emit OpL2L2Receiver.RemoteSenderSet(newRemote);
         receiver.setRemoteSender(newRemote);
-        
+
         // set to default messenger
         receiver.setMessengerToDefault();
     }
@@ -97,7 +117,7 @@ contract OpL2L2ReceiverMoreTest is Test {
         vm.prank(address(0xBAD));
         vm.expectRevert();
         receiver.setBridgeAdapter(address(bridge));
-        
+
         vm.prank(address(0xBAD));
         vm.expectRevert();
         receiver.setAssetMapper(address(mapper));
@@ -155,7 +175,7 @@ contract OpL2L2ReceiverMoreTest is Test {
         messenger.setXSender(sender);
         bytes32 chain = keccak256("dst");
         // use a real ERC20 so escrow.transfer succeeds
-        MockERC20 satToken = new MockERC20("SAT","SAT",18);
+        MockERC20 satToken = new MockERC20("SAT", "SAT", 18);
         address sat = address(satToken);
         // fund escrow so it can transfer out
         satToken.mint(address(escrow), 10 ether);
@@ -171,10 +191,18 @@ contract OpL2L2ReceiverMoreTest is Test {
 
     function testOnlyAdminCannotSetters() public {
         address stranger = address(0xBAD);
-        vm.prank(stranger); vm.expectRevert(); receiver.setEscrowGateway(address(escrow));
-        vm.prank(stranger); vm.expectRevert(); receiver.setMessenger(address(messenger));
-        vm.prank(stranger); vm.expectRevert(); receiver.setRemoteSender(sender);
-        vm.prank(stranger); vm.expectRevert(); receiver.setMessengerToDefault();
+        vm.prank(stranger);
+        vm.expectRevert();
+        receiver.setEscrowGateway(address(escrow));
+        vm.prank(stranger);
+        vm.expectRevert();
+        receiver.setMessenger(address(messenger));
+        vm.prank(stranger);
+        vm.expectRevert();
+        receiver.setRemoteSender(sender);
+        vm.prank(stranger);
+        vm.expectRevert();
+        receiver.setMessengerToDefault();
     }
 
     function testOnlyMessengerGuardOnDeposit() public {

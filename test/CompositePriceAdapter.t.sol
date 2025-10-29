@@ -10,8 +10,16 @@ contract MockAdapter is IPriceAdapter {
     uint256 public px;
     uint64 public ts;
     bool public stale;
-    function set(uint256 p, uint64 t, bool s) external { px = p; ts = t; stale = s; }
-    function getPrice(address) external view returns (uint256, uint64, bool) { return (px, ts, stale); }
+
+    function set(uint256 p, uint64 t, bool s) external {
+        px = p;
+        ts = t;
+        stale = s;
+    }
+
+    function getPrice(address) external view returns (uint256, uint64, bool) {
+        return (px, ts, stale);
+    }
 }
 
 contract CompositePriceAdapterTest is Test {
@@ -23,7 +31,14 @@ contract CompositePriceAdapterTest is Test {
 
     function setUp() public {
         CompositePriceAdapter impl = new CompositePriceAdapter();
-        comp = CompositePriceAdapter(address(new ERC1967Proxy(address(impl), abi.encodeWithSelector(CompositePriceAdapter.initialize.selector, admin, address(0), address(0)))));
+        comp = CompositePriceAdapter(
+            address(
+                new ERC1967Proxy(
+                    address(impl),
+                    abi.encodeWithSelector(CompositePriceAdapter.initialize.selector, admin, address(0), address(0))
+                )
+            )
+        );
         primary = new MockAdapter();
         secondary = new MockAdapter();
         comp.setPrimary(address(primary));

@@ -11,15 +11,21 @@ import {Constants} from "../../lib/Constants.sol";
 
 /// @title RiskController
 /// @notice Optional controller to adjust LTVs under strict guardrails, calling CollateralManager.setAssetConfig
-contract RiskController is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract RiskController is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable
+{
     ICollateralManager public cm;
 
     struct Guardrails {
-        uint16 minLtvBps;   // min allowed LTV
-        uint16 maxLtvBps;   // max allowed LTV
-        uint16 maxStepBps;  // max change per update
+        uint16 minLtvBps; // min allowed LTV
+        uint16 maxLtvBps; // max allowed LTV
+        uint16 maxStepBps; // max change per update
         uint64 minInterval; // min seconds between updates
-        uint64 lastUpdate;  // last update timestamp
+        uint64 lastUpdate; // last update timestamp
     }
 
     mapping(address => Guardrails) public rails; // per-asset

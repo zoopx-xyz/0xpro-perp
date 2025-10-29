@@ -11,13 +11,20 @@ import {Constants} from "../../lib/Constants.sol";
 
 /// @title CompositePriceAdapter
 /// @notice Tries primary first (e.g., Stork). If stale or deviates beyond bounds, falls back to secondary (e.g., SignedPriceOracle).
-contract CompositePriceAdapter is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, IPriceAdapter {
+contract CompositePriceAdapter is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable,
+    IPriceAdapter
+{
     IPriceAdapter public primary;
     IPriceAdapter public secondary; // optional
 
     struct Policy {
-        bool fallbackOnStale;     // if primary stale, try secondary
-        uint16 maxDeviationBps;   // if >0, require |p - s|/s <= maxDeviationBps; if s is stale, skip check
+        bool fallbackOnStale; // if primary stale, try secondary
+        uint16 maxDeviationBps; // if >0, require |p - s|/s <= maxDeviationBps; if s is stale, skip check
     }
 
     mapping(address => Policy) public policyOf; // per-asset policy
@@ -45,9 +52,20 @@ contract CompositePriceAdapter is Initializable, AccessControlUpgradeable, UUPSU
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}
 
-    function setPrimary(address a) external onlyRole(Constants.DEFAULT_ADMIN) { primary = IPriceAdapter(a); emit PrimarySet(a); }
-    function setSecondary(address a) external onlyRole(Constants.DEFAULT_ADMIN) { secondary = IPriceAdapter(a); emit SecondarySet(a); }
-    function setPolicy(address asset, bool fallbackOnStale, uint16 maxDeviationBps) external onlyRole(Constants.DEFAULT_ADMIN) {
+    function setPrimary(address a) external onlyRole(Constants.DEFAULT_ADMIN) {
+        primary = IPriceAdapter(a);
+        emit PrimarySet(a);
+    }
+
+    function setSecondary(address a) external onlyRole(Constants.DEFAULT_ADMIN) {
+        secondary = IPriceAdapter(a);
+        emit SecondarySet(a);
+    }
+
+    function setPolicy(address asset, bool fallbackOnStale, uint16 maxDeviationBps)
+        external
+        onlyRole(Constants.DEFAULT_ADMIN)
+    {
         policyOf[asset] = Policy(fallbackOnStale, maxDeviationBps);
         emit PolicySet(asset, fallbackOnStale, maxDeviationBps);
     }
@@ -60,7 +78,7 @@ contract CompositePriceAdapter is Initializable, AccessControlUpgradeable, UUPSU
             if (pol.maxDeviationBps == 0 || address(secondary) == address(0)) {
                 return (pPx, pTs, false);
             }
-            (uint256 sPx, , bool sStale) = secondary.getPrice(asset);
+            (uint256 sPx,, bool sStale) = secondary.getPrice(asset);
             if (!sStale && sPx > 0) {
                 uint256 diff = pPx > sPx ? pPx - sPx : sPx - pPx;
                 if (diff * 10_000 <= sPx * pol.maxDeviationBps) {

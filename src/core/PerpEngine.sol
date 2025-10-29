@@ -295,7 +295,9 @@ contract PerpEngine is
         if (s == 0 && newS != 0) _openMarketsByAccount[f.account].push(f.marketId);
         _reserveInitialMargin(f, m);
         _emitFillAndPosition(f, newS, 0);
-        _emitTradeExecuted(f.account, f.marketId, m.symbol, isLong, uint256(f.size), leverageX, mark, 0, collateralZToken);
+        _emitTradeExecuted(
+            f.account, f.marketId, m.symbol, isLong, uint256(f.size), leverageX, mark, 0, collateralZToken
+        );
     }
 
     function closePosition(bytes32 marketId) external nonReentrant {
@@ -341,8 +343,8 @@ contract PerpEngine is
             uint256 releaseTokenAmt = MathUtils.z18ToToken(releaseZ, zDecs2);
             vault.release(f.account, address(zUsd), releaseTokenAmt, false, bytes32(0));
         }
-    _emitFillAndPosition(f, 0, pnl);
-    _emitTradeExecuted(msg.sender, marketId, m.symbol, !isLong, uint256(f.size), 0, 0, mark, 0);
+        _emitFillAndPosition(f, 0, pnl);
+        _emitTradeExecuted(msg.sender, marketId, m.symbol, !isLong, uint256(f.size), 0, 0, mark, 0);
     }
 
     function updatePositionMargin(bytes32, /*marketId*/ uint256 /*additionalCollateralToken*/ ) external {
@@ -378,8 +380,8 @@ contract PerpEngine is
         require(!stale, "stale price");
         uint256 closedNotionalZ = MathUtils.notionalZFromSize(closedSize, m.baseDecimals, mark);
         uint256 penaltyZ = _computeAndApplyPenalty(account, marketId, closedNotionalZ);
-    // release reserved margin broadly (approximate: release equal to IMR at mark)
-    uint256 releaseZ = _releaseReservedMargin(account, marketId, closedNotionalZ);
+        // release reserved margin broadly (approximate: release equal to IMR at mark)
+        uint256 releaseZ = _releaseReservedMargin(account, marketId, closedNotionalZ);
 
         // Prune zero position from open markets list
         _pruneZeroPosition(account, marketId);
@@ -427,7 +429,7 @@ contract PerpEngine is
         uint256 penaltyZ = _computeAndApplyPenalty(account, marketId, closedNotionalZ);
 
         // Release reserved margin proportionally
-    uint256 releaseZ = _releaseReservedMargin(account, marketId, closedNotionalZ);
+        uint256 releaseZ = _releaseReservedMargin(account, marketId, closedNotionalZ);
 
         emit PartialLiquidation(
             account, marketId, uint128(closeSize), uint128(mark), uint128(penaltyZ), uint128(remainingSize)

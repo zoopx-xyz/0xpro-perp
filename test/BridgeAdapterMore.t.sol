@@ -45,8 +45,7 @@ contract BridgeAdapterMoreTest is Test {
         vault = new MockVaultBA();
         impl = new BridgeAdapter();
         ERC1967Proxy proxy = new ERC1967Proxy(
-            address(impl),
-            abi.encodeWithSelector(BridgeAdapter.initialize.selector, admin, address(vault))
+            address(impl), abi.encodeWithSelector(BridgeAdapter.initialize.selector, admin, address(vault))
         );
         bridge = BridgeAdapter(address(proxy));
         // Grant receiver role to this test by default

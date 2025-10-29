@@ -7,8 +7,14 @@ import {IPriceAdapter} from "../src/core/interfaces/IPriceAdapter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract MockPA2 is IPriceAdapter {
-    uint256 p; bool s;
-    constructor(uint256 _p, bool _s){ p=_p; s=_s; }
+    uint256 p;
+    bool s;
+
+    constructor(uint256 _p, bool _s) {
+        p = _p;
+        s = _s;
+    }
+
     function getPrice(address) external view returns (uint256 priceX1e18, uint64 ts, bool isStale) {
         return (p, uint64(block.timestamp), s);
     }
@@ -30,9 +36,11 @@ contract OracleRouterMoreTest is Test {
         router.registerAdapter(a1, address(m1));
         router.registerAdapter(a2, address(m2));
         (uint256 p1, bool s1) = router.getPriceInZUSD(a1);
-        assertEq(p1, 111e18); assertFalse(s1);
+        assertEq(p1, 111e18);
+        assertFalse(s1);
         (uint256 p2, bool s2) = router.getPriceAndStale(a2);
-        assertEq(p2, 222e18); assertTrue(s2);
+        assertEq(p2, 222e18);
+        assertTrue(s2);
     }
 
     function testOnlyAdminCannotRegisterAdapter() public {

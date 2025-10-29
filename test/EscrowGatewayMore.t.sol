@@ -24,7 +24,7 @@ contract EscrowGatewayMoreTest is Test {
     MockERC20 token;
     MockAdapterGood goodAdapter;
     MockAdapterBad badAdapter;
-    
+
     address admin = address(this);
     address user = address(0xBEEF);
     bytes32 chain = keccak256("dst");
@@ -32,28 +32,29 @@ contract EscrowGatewayMoreTest is Test {
     function setUp() public {
         token = new MockERC20("TEST", "TEST", 18);
         token.transferOwnership(admin);
-        
+
         EscrowGateway impl = new EscrowGateway();
-        escrow = EscrowGateway(address(new ERC1967Proxy(address(impl), 
-            abi.encodeWithSelector(EscrowGateway.initialize.selector, admin))));
-        
+        escrow = EscrowGateway(
+            address(new ERC1967Proxy(address(impl), abi.encodeWithSelector(EscrowGateway.initialize.selector, admin)))
+        );
+
         goodAdapter = new MockAdapterGood();
         badAdapter = new MockAdapterBad();
-        
+
         // Setup token and approvals
         token.mint(user, 1000 ether);
         vm.prank(user);
         token.approve(address(escrow), type(uint256).max);
-        
+
         escrow.setSupportedAsset(address(token), true);
     }
 
     function testDepositWithAdapterSuccess() public {
         escrow.setMessageSenderAdapter(address(goodAdapter));
-        
+
         vm.prank(user);
         escrow.deposit(address(token), 100 ether, chain);
-        
+
         // Check token was escrowed
         assertEq(token.balanceOf(address(escrow)), 100 ether);
         assertEq(token.balanceOf(user), 900 ether);
@@ -61,7 +62,7 @@ contract EscrowGatewayMoreTest is Test {
 
     function testDepositWithAdapterFailure() public {
         escrow.setMessageSenderAdapter(address(badAdapter));
-        
+
         vm.prank(user);
         vm.expectRevert(bytes("sender adapter call failed"));
         escrow.deposit(address(token), 100 ether, chain);
@@ -84,7 +85,7 @@ contract EscrowGatewayMoreTest is Test {
         vm.expectEmit(true, false, false, true);
         emit EscrowGateway.MessageSenderAdapterSet(address(goodAdapter));
         escrow.setMessageSenderAdapter(address(goodAdapter));
-        
+
         vm.expectEmit(true, false, false, true);
         emit EscrowGateway.SupportedAssetSet(address(0x123), true);
         escrow.setSupportedAsset(address(0x123), true);

@@ -9,12 +9,24 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 contract MockCMMore is ICollateralManager {
     mapping(address => AssetConfig) public cfg;
+
     function setAssetConfig(address asset, bool enabled, uint16 ltvBps, address oracle, uint8 decimals) external {
         cfg[asset] = AssetConfig(enabled, ltvBps, oracle, decimals);
     }
-    function assetValueInZUSD(address, uint256) external pure returns (uint256) { return 0; }
-    function collateralValueInZUSD(address, uint256) external pure returns (uint256) { return 0; }
-    function config(address asset) external view returns (bool enabled, uint16 ltvBps, address oracle, uint8 decimals) {
+
+    function assetValueInZUSD(address, uint256) external pure returns (uint256) {
+        return 0;
+    }
+
+    function collateralValueInZUSD(address, uint256) external pure returns (uint256) {
+        return 0;
+    }
+
+    function config(address asset)
+        external
+        view
+        returns (bool enabled, uint16 ltvBps, address oracle, uint8 decimals)
+    {
         AssetConfig memory c = cfg[asset];
         return (c.enabled, c.ltvBps, c.oracle, c.decimals);
     }
@@ -31,8 +43,7 @@ contract RiskControllerMoreTest is Test {
         cm = new MockCMMore();
         impl = new RiskController();
         ERC1967Proxy proxy = new ERC1967Proxy(
-            address(impl),
-            abi.encodeWithSelector(RiskController.initialize.selector, admin, address(cm))
+            address(impl), abi.encodeWithSelector(RiskController.initialize.selector, admin, address(cm))
         );
         rc = RiskController(address(proxy));
         rc.grantRole(Constants.RISK_ADMIN, admin);
@@ -92,8 +103,8 @@ contract RiskControllerMoreTest is Test {
         vm.warp(block.timestamp + 3601);
         // first update ok
         rc.updateLtv(asset, 5500);
-    // immediate next update should revert due to cooldown (message may vary under IR mapping)
-    vm.expectRevert();
+        // immediate next update should revert due to cooldown (message may vary under IR mapping)
+        vm.expectRevert();
         rc.updateLtv(asset, 5600);
     }
 }

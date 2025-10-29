@@ -10,7 +10,12 @@ import {Constants} from "../lib/Constants.sol";
 contract MockPriceAdapter is IPriceAdapter {
     uint256 public p;
     bool public stale;
-    constructor(uint256 _p, bool _s) { p = _p; stale = _s; }
+
+    constructor(uint256 _p, bool _s) {
+        p = _p;
+        stale = _s;
+    }
+
     function getPrice(address) external view returns (uint256 priceX1e18, uint64 ts, bool isStale) {
         return (p, uint64(block.timestamp), stale);
     }
@@ -53,7 +58,7 @@ contract OracleRouterUUPSTest is Test {
         (uint256 p2, bool s2) = router.getPriceAndStale(a2);
         assertEq(p1, 22e18);
         assertTrue(s2); // m2 is stale=true
-        // both getters exercised across two assets
+            // both getters exercised across two assets
     }
 
     function testNoAdapterReverts() public {

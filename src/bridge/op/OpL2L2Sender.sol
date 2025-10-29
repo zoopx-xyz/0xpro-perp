@@ -13,7 +13,14 @@ import {Constants} from "../../../lib/Constants.sol";
 
 /// @title OpL2L2Sender
 /// @notice Outbound message sender using OP Superchain L2ToL2CrossDomainMessenger
-contract OpL2L2Sender is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, IBridgeMessageSender {
+contract OpL2L2Sender is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable,
+    IBridgeMessageSender
+{
     IL2ToL2CrossDomainMessenger public messenger;
     address public remoteReceiver; // Receiver contract on the remote chain
     uint32 public minGasLimit; // conservative gas limit for message execution
@@ -29,7 +36,10 @@ contract OpL2L2Sender is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _disableInitializers();
     }
 
-    function initialize(address admin, address messenger_, address remoteReceiver_, uint32 minGas_) external initializer {
+    function initialize(address admin, address messenger_, address remoteReceiver_, uint32 minGas_)
+        external
+        initializer
+    {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
@@ -71,19 +81,32 @@ contract OpL2L2Sender is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         emit MinGasLimitSet(minGas_);
     }
 
-    function sendDeposit(address user, address asset, uint256 amount, bytes32 depositId, bytes32 dstChain) external nonReentrant whenNotPaused {
+    function sendDeposit(address user, address asset, uint256 amount, bytes32 depositId, bytes32 dstChain)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         bytes memory payload = abi.encodeWithSignature(
             "onDepositMessage(address,address,uint256,bytes32,bytes32)", user, asset, amount, depositId, dstChain
         );
         messenger.sendMessage(remoteReceiver, payload, minGasLimit);
     }
 
-    function sendWithdrawal(address user, address asset, uint256 amount, bytes32 withdrawalId, bytes32 dstChain) external nonReentrant whenNotPaused {
+    function sendWithdrawal(address user, address asset, uint256 amount, bytes32 withdrawalId, bytes32 dstChain)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         // Translate base asset to satellite asset for the destination chain if mapper configured
         address satAsset = address(assetMapper) == address(0) ? asset : assetMapper.getSatelliteAsset(dstChain, asset);
         require(satAsset != address(0), "asset mapping missing");
         bytes memory payload = abi.encodeWithSignature(
-            "onWithdrawalMessage(address,address,uint256,bytes32,bytes32)", user, satAsset, amount, withdrawalId, dstChain
+            "onWithdrawalMessage(address,address,uint256,bytes32,bytes32)",
+            user,
+            satAsset,
+            amount,
+            withdrawalId,
+            dstChain
         );
         messenger.sendMessage(remoteReceiver, payload, minGasLimit);
     }

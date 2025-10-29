@@ -13,9 +13,10 @@ contract InsuranceFundUUPSTest is Test {
     address admin = address(this);
 
     function setUp() public {
-        asset = new MockERC20("USDC","USDC",6);
+        asset = new MockERC20("USDC", "USDC", 6);
         impl = new InsuranceFund();
-        bytes memory initData = abi.encodeWithSelector(InsuranceFund.initialize.selector, admin, address(asset), "Insurance Fund", "iFUND");
+        bytes memory initData =
+            abi.encodeWithSelector(InsuranceFund.initialize.selector, admin, address(asset), "Insurance Fund", "iFUND");
         proxyFund = InsuranceFund(address(new ERC1967Proxy(address(impl), initData)));
     }
 

@@ -11,9 +11,11 @@ contract MockCollateralManagerMV2B {
     function assetValueInZUSD(address, uint256 amount) external pure returns (uint256) {
         return amount; // 1:1 mapping for tests
     }
+
     function collateralValueInZUSD(address, uint256 amount) external pure returns (uint256) {
         return amount;
     }
+
     function getAssets() external pure returns (address[] memory) {
         address[] memory arr = new address[](1);
         arr[0] = address(0x1);
@@ -30,7 +32,7 @@ contract MarginVaultV2BridgeTest is Test {
     bytes32 MARKET = keccak256("ETH-PERP");
 
     function setUp() public {
-        token = new MockERC20("TKN","TKN",18);
+        token = new MockERC20("TKN", "TKN", 18);
         impl = new MarginVaultV2();
         MockCollateralManagerMV2B cm = new MockCollateralManagerMV2B();
         bytes memory initData = abi.encodeWithSelector(MarginVaultV2.initialize.selector, admin, address(cm));
@@ -41,25 +43,31 @@ contract MarginVaultV2BridgeTest is Test {
         vault.grantRole(Constants.BRIDGE_ROLE, admin);
         // fund user
         token.mint(user, 1_000 ether);
-        vm.prank(user); token.approve(address(vault), type(uint256).max);
+        vm.prank(user);
+        token.approve(address(vault), type(uint256).max);
     }
 
     function _depositCross(address who, uint256 amount) internal {
-        vm.prank(who); vault.deposit(address(token), amount, false, 0);
+        vm.prank(who);
+        vault.deposit(address(token), amount, false, 0);
     }
 
     function _depositIsolated(address who, uint256 amount) internal {
-        vm.prank(who); vault.deposit(address(token), amount, true, MARKET);
+        vm.prank(who);
+        vault.deposit(address(token), amount, true, MARKET);
     }
 
     function testDepositAndWithdrawAmountZeroReverts() public {
-        vm.prank(user); vm.expectRevert(bytes("amount=0"));
+        vm.prank(user);
+        vm.expectRevert(bytes("amount=0"));
         vault.deposit(address(token), 0, false, 0);
-        vm.prank(user); vm.expectRevert(bytes("amount=0"));
+        vm.prank(user);
+        vm.expectRevert(bytes("amount=0"));
         vault.deposit(address(token), 0, true, MARKET);
 
         _depositCross(user, 1 ether);
-        vm.prank(user); vm.expectRevert(bytes("amount=0"));
+        vm.prank(user);
+        vm.expectRevert(bytes("amount=0"));
         vault.withdraw(address(token), 0, false, 0);
     }
 

@@ -7,7 +7,7 @@ import {Constants} from "../lib/Constants.sol";
 
 contract MarketFactoryExtendedTest is Test {
     MarketFactory factory;
-    
+
     function setUp() public {
         factory = MarketFactory(_deployProxy(address(new MarketFactory())));
         factory.initialize(address(this));
@@ -29,61 +29,52 @@ contract MarketFactoryExtendedTest is Test {
         // Deploy a fresh instance to test initialization
         MarketFactory freshFactory = MarketFactory(_deployProxy(address(new MarketFactory())));
         address admin = address(0x456);
-        
+
         freshFactory.initialize(admin);
-        
+
         // Check that admin role was granted correctly
         assertTrue(freshFactory.hasRole(Constants.DEFAULT_ADMIN, admin));
     }
-    
+
     function testInitializeCanOnlyBeCalledOnce() public {
         // Try to initialize again - should revert
         vm.expectRevert();
         factory.initialize(address(0x789));
     }
-    
+
     function testCreateMarketWithDifferentParams() public {
         bytes32 marketId = keccak256("AVAX-PERP");
-        MarketFactory.MarketParams memory params = MarketFactory.MarketParams({
-            base: address(0xABC), 
-            baseDecimals: 6, 
-            quoteDecimals: 8
-        });
-        
+        MarketFactory.MarketParams memory params =
+            MarketFactory.MarketParams({base: address(0xABC), baseDecimals: 6, quoteDecimals: 8});
+
         vm.expectEmit(true, true, true, true);
         emit MarketFactory.MarketCreated(marketId, address(0xABC), 6, 8);
-        
+
         factory.createMarket(marketId, address(0xABC), 6, 8, params);
-        
+
         (address base, uint8 bd, uint8 qd) = factory.markets(marketId);
         assertEq(base, address(0xABC));
         assertEq(bd, 6);
         assertEq(qd, 8);
     }
-    
+
     function testCreateMarketOverwrite() public {
         bytes32 marketId = keccak256("DOT-PERP");
-        
+
         // Create first market
-        MarketFactory.MarketParams memory params1 = MarketFactory.MarketParams({
-            base: address(0x111), 
-            baseDecimals: 10, 
-            quoteDecimals: 18
-        });
+        MarketFactory.MarketParams memory params1 =
+            MarketFactory.MarketParams({base: address(0x111), baseDecimals: 10, quoteDecimals: 18});
         factory.createMarket(marketId, address(0x111), 10, 18, params1);
-        
+
         // Overwrite with different market
-        MarketFactory.MarketParams memory params2 = MarketFactory.MarketParams({
-            base: address(0x222), 
-            baseDecimals: 12, 
-            quoteDecimals: 6
-        });
-        
+        MarketFactory.MarketParams memory params2 =
+            MarketFactory.MarketParams({base: address(0x222), baseDecimals: 12, quoteDecimals: 6});
+
         vm.expectEmit(true, true, true, true);
         emit MarketFactory.MarketCreated(marketId, address(0x222), 12, 6);
-        
+
         factory.createMarket(marketId, address(0x222), 12, 6, params2);
-        
+
         // Verify the market was overwritten
         (address base, uint8 bd, uint8 qd) = factory.markets(marketId);
         assertEq(base, address(0x222));
@@ -94,7 +85,7 @@ contract MarketFactoryExtendedTest is Test {
     function testConstructorDisablesInitializers() public {
         // The constructor should have disabled initializers
         MarketFactory impl = new MarketFactory();
-        
+
         // Trying to initialize implementation directly should revert
         vm.expectRevert();
         impl.initialize(address(0x123));

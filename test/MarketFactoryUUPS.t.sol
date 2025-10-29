@@ -23,12 +23,13 @@ contract MarketFactoryUUPSTest is Test {
 
     function testCreateMarketThroughUUPSProxy() public {
         bytes32 id = keccak256("ARB-PERP");
-        MarketFactory.MarketParams memory p = MarketFactory.MarketParams({base: address(0xABCD), baseDecimals: 18, quoteDecimals: 6});
-        
+        MarketFactory.MarketParams memory p =
+            MarketFactory.MarketParams({base: address(0xABCD), baseDecimals: 18, quoteDecimals: 6});
+
         vm.expectEmit(true, true, true, true);
         emit MarketFactory.MarketCreated(id, address(0xABCD), 18, 6);
         proxyFactory.createMarket(id, address(0xABCD), 18, 6, p);
-        
+
         (address base, uint8 bd, uint8 qd) = proxyFactory.markets(id);
         assertEq(base, address(0xABCD));
         assertEq(bd, 18);
@@ -43,7 +44,8 @@ contract MarketFactoryUUPSTest is Test {
 
         // After upgrade, functionality should still work
         bytes32 id = keccak256("OP-PERP");
-        MarketFactory.MarketParams memory p = MarketFactory.MarketParams({base: address(0xD00D), baseDecimals: 8, quoteDecimals: 18});
+        MarketFactory.MarketParams memory p =
+            MarketFactory.MarketParams({base: address(0xD00D), baseDecimals: 8, quoteDecimals: 18});
         proxyFactory.createMarket(id, address(0xD00D), 8, 18, p);
         (address base,,) = proxyFactory.markets(id);
         assertEq(base, address(0xD00D));

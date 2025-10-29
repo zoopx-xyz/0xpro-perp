@@ -50,11 +50,11 @@ contract AssetMapperTest is Test {
         bytes32 chain = keccak256("unmapped-chain");
         address sat = address(0x111);
         address base = address(0x222);
-        
+
         // before mapping
         assertEq(mapper.getBaseAsset(chain, sat), address(0));
         assertEq(mapper.getSatelliteAsset(chain, base), address(0));
-        
+
         // after mapping
         mapper.setMapping(chain, sat, base);
         assertEq(mapper.getBaseAsset(chain, sat), base);
@@ -73,11 +73,11 @@ contract AssetMapperTest is Test {
         address sat1 = address(0x111);
         address sat2 = address(0x222);
         address base = address(0x333);
-        
+
         // first mapping
         mapper.setMapping(chain, sat1, base);
         assertEq(mapper.getBaseAsset(chain, sat1), base);
-        
+
         // overwrite with different satellite for same base
         mapper.setMapping(chain, sat2, base);
         assertEq(mapper.getBaseAsset(chain, sat2), base);

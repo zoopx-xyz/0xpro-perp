@@ -13,11 +13,15 @@ contract TreasurySpoke is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     address public zUsdToken;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(address admin) external initializer {
-        __AccessControl_init(); __UUPSUpgradeable_init();
-        _grantRole(Constants.DEFAULT_ADMIN, admin); _grantRole(Constants.TREASURER, admin);
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+        _grantRole(Constants.DEFAULT_ADMIN, admin);
+        _grantRole(Constants.TREASURER, admin);
     }
 
     function setZUsdToken(address _zUsdToken) external onlyRole(Constants.DEFAULT_ADMIN) {

@@ -12,9 +12,9 @@ contract SignedPriceOracleSignedTest is Test {
     address signer;
 
     function setUp() public {
-    SignedPriceOracle impl = new SignedPriceOracle();
-    privateKey = 0xBEEF;
-    signer = vm.addr(privateKey);
+        SignedPriceOracle impl = new SignedPriceOracle();
+        privateKey = 0xBEEF;
+        signer = vm.addr(privateKey);
         spo = SignedPriceOracle(address(new ERC1967Proxy(address(impl), "")));
         spo.initialize(admin, signer, 300);
     }
@@ -33,7 +33,7 @@ contract SignedPriceOracleSignedTest is Test {
         uint64 ts = uint64(block.timestamp);
         bytes32 digest = keccak256(abi.encode(asset, price, ts, address(spo)));
         bytes32 ethSigned = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", digest));
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethSigned);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethSigned);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(0xCAFE));

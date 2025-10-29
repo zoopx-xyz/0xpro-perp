@@ -11,9 +11,11 @@ contract MockCollateralManager {
     function assetValueInZUSD(address, uint256 amount) external pure returns (uint256) {
         return amount; // 1:1 mapping for tests
     }
+
     function collateralValueInZUSD(address, uint256 amount) external pure returns (uint256) {
         return amount;
     }
+
     function getAssets() external pure returns (address[] memory) {
         address[] memory arr = new address[](1);
         arr[0] = address(0x1);
@@ -23,9 +25,18 @@ contract MockCollateralManager {
 
 contract MockEngineMV2 {
     uint256 public mmr;
-    function set(uint256 v) external { mmr = v; }
-    function computeAccountMMRZ(address) external view returns (uint256) { return mmr; }
-    function getUnrealizedPnlZ(address) external pure returns (int256) { return 0; }
+
+    function set(uint256 v) external {
+        mmr = v;
+    }
+
+    function computeAccountMMRZ(address) external view returns (uint256) {
+        return mmr;
+    }
+
+    function getUnrealizedPnlZ(address) external pure returns (int256) {
+        return 0;
+    }
 }
 
 contract MarginVaultV2MoreTest is Test {
@@ -37,7 +48,7 @@ contract MarginVaultV2MoreTest is Test {
     bytes32 MARKET = keccak256("ETH-PERP");
 
     function setUp() public {
-        token = new MockERC20("TKN","TKN",18);
+        token = new MockERC20("TKN", "TKN", 18);
         impl = new MarginVaultV2();
         MockCollateralManager cm = new MockCollateralManager();
         bytes memory initData = abi.encodeWithSelector(MarginVaultV2.initialize.selector, admin, address(cm));
@@ -48,15 +59,18 @@ contract MarginVaultV2MoreTest is Test {
         vault.grantRole(Constants.BRIDGE_ROLE, admin);
         // fund user
         token.mint(user, 1_000 ether);
-        vm.prank(user); token.approve(address(vault), type(uint256).max);
+        vm.prank(user);
+        token.approve(address(vault), type(uint256).max);
     }
 
     function _depositCross(address who, uint256 amount) internal {
-        vm.prank(who); vault.deposit(address(token), amount, false, 0);
+        vm.prank(who);
+        vault.deposit(address(token), amount, false, 0);
     }
 
     function _depositIsolated(address who, uint256 amount) internal {
-        vm.prank(who); vault.deposit(address(token), amount, true, MARKET);
+        vm.prank(who);
+        vault.deposit(address(token), amount, true, MARKET);
     }
 
     function testUnpauseFunctionCovered() public {
@@ -70,26 +84,31 @@ contract MarginVaultV2MoreTest is Test {
         _depositCross(user, 5 ether);
         _depositIsolated(user, 3 ether);
         // withdraw isolated
-        vm.prank(user); vault.withdraw(address(token), 1 ether, true, MARKET);
+        vm.prank(user);
+        vault.withdraw(address(token), 1 ether, true, MARKET);
         // withdraw cross
-        vm.prank(user); vault.withdraw(address(token), 2 ether, false, 0);
+        vm.prank(user);
+        vault.withdraw(address(token), 2 ether, false, 0);
     }
 
     function testWithdrawInsufficientRevertsBothPaths() public {
         _depositCross(user, 1 ether);
         // cross insufficient
-        vm.prank(user); vm.expectRevert(bytes("insufficient"));
+        vm.prank(user);
+        vm.expectRevert(bytes("insufficient"));
         vault.withdraw(address(token), 2 ether, false, 0);
         // isolated insufficient
         _depositIsolated(user, 0.5 ether);
-        vm.prank(user); vm.expectRevert(bytes("insufficient"));
+        vm.prank(user);
+        vm.expectRevert(bytes("insufficient"));
         vault.withdraw(address(token), 1 ether, true, MARKET);
     }
 
     function testWithdrawBridgedOnlyReverts() public {
         vault.setBridgedOnlyAsset(address(token), true);
         _depositCross(user, 1 ether);
-        vm.prank(user); vm.expectRevert(bytes("bridged-only: use bridge withdraw"));
+        vm.prank(user);
+        vm.expectRevert(bytes("bridged-only: use bridge withdraw"));
         vault.withdraw(address(token), 0.1 ether, false, 0);
     }
 
@@ -113,9 +132,9 @@ contract MarginVaultV2MoreTest is Test {
 
     function testSetDepsWiresContracts() public {
         // set dependencies and verify they are stored
-    address rc = address(0x1001);
-    address or = address(0x2002);
-    address pe = address(0x3003);
+        address rc = address(0x1001);
+        address or = address(0x2002);
+        address pe = address(0x3003);
         vault.setDeps(rc, or, pe);
         // read via public getters
         assertEq(address(vault.riskConfig()), rc);
@@ -127,7 +146,7 @@ contract MarginVaultV2MoreTest is Test {
         // Wire a mock engine with high MMR and nonzero riskConfig to enable guard
         MockEngineMV2 eng = new MockEngineMV2();
         eng.set(1000 ether);
-    vault.setDeps(address(0xABCD), address(0xDCBA), address(eng));
+        vault.setDeps(address(0xABCD), address(0xDCBA), address(eng));
         // Deposit some balance
         _depositCross(user, 10 ether);
         // Attempt withdraw should revert on insufficient equity (10 < 1000)

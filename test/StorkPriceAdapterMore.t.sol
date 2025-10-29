@@ -10,12 +10,22 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 contract MockStork2 is IStork {
     int256 public value;
     uint64 public timestamp;
-    function set(int256 v, uint64 t) external { value = v; timestamp = t; }
-    function getTemporalNumericValueV1(bytes32) external view returns (StorkStructs.TemporalNumericValue memory) {
-        return StorkStructs.TemporalNumericValue({ value: value, timestamp: timestamp });
+
+    function set(int256 v, uint64 t) external {
+        value = v;
+        timestamp = t;
     }
-    function getTemporalNumericValueUnsafeV1(bytes32) external view returns (StorkStructs.TemporalNumericValue memory) {
-        return StorkStructs.TemporalNumericValue({ value: value, timestamp: timestamp });
+
+    function getTemporalNumericValueV1(bytes32) external view returns (StorkStructs.TemporalNumericValue memory) {
+        return StorkStructs.TemporalNumericValue({value: value, timestamp: timestamp});
+    }
+
+    function getTemporalNumericValueUnsafeV1(bytes32)
+        external
+        view
+        returns (StorkStructs.TemporalNumericValue memory)
+    {
+        return StorkStructs.TemporalNumericValue({value: value, timestamp: timestamp});
     }
 }
 
@@ -28,7 +38,13 @@ contract StorkPriceAdapterMoreTest is Test {
     function setUp() public {
         stork = new MockStork2();
         StorkPriceAdapter impl = new StorkPriceAdapter();
-        adapter = StorkPriceAdapter(address(new ERC1967Proxy(address(impl), abi.encodeWithSelector(StorkPriceAdapter.initialize.selector, admin, address(stork)))));
+        adapter = StorkPriceAdapter(
+            address(
+                new ERC1967Proxy(
+                    address(impl), abi.encodeWithSelector(StorkPriceAdapter.initialize.selector, admin, address(stork))
+                )
+            )
+        );
     }
 
     function testSetStorkAndBadArgs() public {

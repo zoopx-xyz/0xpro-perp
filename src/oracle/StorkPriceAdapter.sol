@@ -13,7 +13,14 @@ import {Constants} from "../../lib/Constants.sol";
 
 /// @title StorkPriceAdapter
 /// @notice IPriceAdapter implementation backed by Stork feeds
-contract StorkPriceAdapter is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, IPriceAdapter {
+contract StorkPriceAdapter is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable,
+    IPriceAdapter
+{
     IStork public stork;
     // asset => feedId
     mapping(address => bytes32) public feedIdOf;

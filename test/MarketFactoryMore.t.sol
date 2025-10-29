@@ -11,12 +11,15 @@ contract MarketFactoryMoreTest is Test {
 
     function setUp() public {
         MarketFactory impl = new MarketFactory();
-        factory = MarketFactory(address(new ERC1967Proxy(address(impl), abi.encodeWithSelector(MarketFactory.initialize.selector, admin))));
+        factory = MarketFactory(
+            address(new ERC1967Proxy(address(impl), abi.encodeWithSelector(MarketFactory.initialize.selector, admin)))
+        );
     }
 
     function testOnlyAdminCanCreateMarket() public {
         bytes32 id = keccak256("SOL-PERP");
-        MarketFactory.MarketParams memory p = MarketFactory.MarketParams({base: address(0xABCD), baseDecimals: 9, quoteDecimals: 18});
+        MarketFactory.MarketParams memory p =
+            MarketFactory.MarketParams({base: address(0xABCD), baseDecimals: 9, quoteDecimals: 18});
         vm.prank(address(0xBAD));
         vm.expectRevert();
         factory.createMarket(id, p.base, p.baseDecimals, p.quoteDecimals, p);

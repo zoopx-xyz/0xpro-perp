@@ -11,7 +11,13 @@ import {Constants} from "../../lib/Constants.sol";
 
 /// @title EscrowGateway (Satellite)
 /// @notice Custodies user tokens on a satellite chain and coordinates cross-chain crediting on the base chain
-contract EscrowGateway is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract EscrowGateway is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable
+{
     using SafeERC20 for IERC20;
 
     // Map of supported assets
@@ -19,7 +25,9 @@ contract EscrowGateway is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     address public messageSenderAdapter; // Optional outbound message sender
 
     event SupportedAssetSet(address indexed asset, bool enabled);
-    event DepositEscrowed(address indexed user, address indexed asset, uint256 amount, bytes32 indexed depositId, bytes32 dstChain);
+    event DepositEscrowed(
+        address indexed user, address indexed asset, uint256 amount, bytes32 indexed depositId, bytes32 dstChain
+    );
     event WithdrawalReleased(address indexed user, address indexed asset, uint256 amount, bytes32 indexed withdrawalId);
     event MessageSenderAdapterSet(address indexed adapter);
 
@@ -60,7 +68,7 @@ contract EscrowGateway is Initializable, AccessControlUpgradeable, UUPSUpgradeab
         // If configured, forward message to outbound sender adapter
         if (messageSenderAdapter != address(0)) {
             // solhint-disable-next-line avoid-low-level-calls
-            (bool ok, ) = messageSenderAdapter.call(
+            (bool ok,) = messageSenderAdapter.call(
                 abi.encodeWithSignature(
                     "sendDeposit(address,address,uint256,bytes32,bytes32)",
                     msg.sender,

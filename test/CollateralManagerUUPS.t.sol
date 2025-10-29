@@ -15,7 +15,8 @@ contract CollateralManagerUUPSTest is Test {
         impl = new CollateralManager();
         router = OracleRouter(address(new ERC1967Proxy(address(new OracleRouter()), "")));
         router.initialize(address(this));
-        bytes memory init = abi.encodeWithSelector(CollateralManager.initialize.selector, address(this), address(router));
+        bytes memory init =
+            abi.encodeWithSelector(CollateralManager.initialize.selector, address(this), address(router));
         cm = CollateralManager(address(new ERC1967Proxy(address(impl), init)));
     }
 

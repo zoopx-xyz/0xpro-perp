@@ -78,8 +78,8 @@ contract LiquidationPenaltyTransferTest is Test {
 
         // Risk params (large liq penalty so it is noticeable)
         RiskConfig.MarketRisk memory r = RiskConfig.MarketRisk({
-            imrBps: 1000,   // 10%
-            mmrBps: 900,    // 9%
+            imrBps: 1000, // 10%
+            mmrBps: 900, // 9%
             liqPenaltyBps: 500, // 5%
             makerFeeBps: 0,
             takerFeeBps: 0,
@@ -119,9 +119,9 @@ contract LiquidationPenaltyTransferTest is Test {
         // Crash price to force under MMR
         spo.setPrice(address(base), 30_000e18, uint64(block.timestamp));
 
-    // Track balances before
-    uint256 treasuryBefore = z.balanceOf(address(treasury));
-    uint128 userVaultBefore = vault.getCrossBalance(user, address(z));
+        // Track balances before
+        uint256 treasuryBefore = z.balanceOf(address(treasury));
+        uint128 userVaultBefore = vault.getCrossBalance(user, address(z));
 
         // Liquidate
         engine.liquidate(user, MARKET);
@@ -138,7 +138,11 @@ contract LiquidationPenaltyTransferTest is Test {
         uint256 expectedReleaseToken = 3_000_000_000; // 3e9
 
         assertEq(treasuryAfter - treasuryBefore, expectedPenaltyToken, "treasury penalty delta");
-        assertEq(uint256(userVaultAfter) - uint256(userVaultBefore), expectedReleaseToken - expectedPenaltyToken, "user vault net delta");
+        assertEq(
+            uint256(userVaultAfter) - uint256(userVaultBefore),
+            expectedReleaseToken - expectedPenaltyToken,
+            "user vault net delta"
+        );
         vm.stopPrank();
     }
 }

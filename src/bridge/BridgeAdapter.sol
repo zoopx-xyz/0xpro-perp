@@ -12,11 +12,25 @@ import {Constants} from "../../lib/Constants.sol";
 
 /// @title BridgeAdapter
 /// @notice Base-chain adapter that mints/burns margin credit upon verified cross-chain messages
-contract BridgeAdapter is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, IBridgeAdapter {
+contract BridgeAdapter is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable,
+    IBridgeAdapter
+{
     IBridgeableVault public vault;
     address public messageSenderAdapter; // Optional outbound message sender
     // Rate limiting config per asset
-    struct Limits { uint256 maxPerAssetPerWindow; uint256 maxPerUserPerWindow; uint64 windowSeconds; bool enabled; }
+
+    struct Limits {
+        uint256 maxPerAssetPerWindow;
+        uint256 maxPerUserPerWindow;
+        uint64 windowSeconds;
+        bool enabled;
+    }
+
     mapping(address => Limits) public limits; // asset => limits
     // usage tracking (windowStart => used)
     mapping(address => mapping(uint64 => uint256)) public usedByAsset;
@@ -24,7 +38,13 @@ contract BridgeAdapter is Initializable, AccessControlUpgradeable, UUPSUpgradeab
 
     event VaultSet(address indexed vault);
     event MessageSenderAdapterSet(address indexed adapter);
-    event LimitsSet(address indexed asset, uint256 maxPerAssetPerWindow, uint256 maxPerUserPerWindow, uint64 windowSeconds, bool enabled);
+    event LimitsSet(
+        address indexed asset,
+        uint256 maxPerAssetPerWindow,
+        uint256 maxPerUserPerWindow,
+        uint64 windowSeconds,
+        bool enabled
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -55,7 +75,10 @@ contract BridgeAdapter is Initializable, AccessControlUpgradeable, UUPSUpgradeab
         emit MessageSenderAdapterSet(adapter_);
     }
 
-    function setLimits(address asset, uint256 maxAsset, uint256 maxUser, uint64 windowSec, bool enabled) external onlyRole(Constants.DEFAULT_ADMIN) {
+    function setLimits(address asset, uint256 maxAsset, uint256 maxUser, uint64 windowSec, bool enabled)
+        external
+        onlyRole(Constants.DEFAULT_ADMIN)
+    {
         limits[asset] = Limits(maxAsset, maxUser, windowSec, enabled);
         emit LimitsSet(asset, maxAsset, maxUser, windowSec, enabled);
     }
@@ -105,7 +128,7 @@ contract BridgeAdapter is Initializable, AccessControlUpgradeable, UUPSUpgradeab
         // If configured, forward message to outbound sender adapter
         if (messageSenderAdapter != address(0)) {
             // solhint-disable-next-line avoid-low-level-calls
-            (bool ok, ) = messageSenderAdapter.call(
+            (bool ok,) = messageSenderAdapter.call(
                 abi.encodeWithSignature(
                     "sendWithdrawal(address,address,uint256,bytes32,bytes32)",
                     msg.sender,

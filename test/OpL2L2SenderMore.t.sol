@@ -12,10 +12,16 @@ contract MockL2ToL2Messenger2 is IL2ToL2CrossDomainMessenger {
     address public lastTarget;
     bytes public lastMessage;
     uint32 public lastMinGas;
-    function sendMessage(address target, bytes calldata message, uint32 minGasLimit ) external {
-        lastTarget = target; lastMessage = message; lastMinGas = minGasLimit;
+
+    function sendMessage(address target, bytes calldata message, uint32 minGasLimit) external {
+        lastTarget = target;
+        lastMessage = message;
+        lastMinGas = minGasLimit;
     }
-    function xDomainMessageSender() external view returns (address) { return address(0); }
+
+    function xDomainMessageSender() external view returns (address) {
+        return address(0);
+    }
 }
 
 contract OpL2L2SenderMoreTest is Test {
@@ -30,10 +36,13 @@ contract OpL2L2SenderMoreTest is Test {
     function setUp() public {
         messenger = new MockL2ToL2Messenger2();
         OpL2L2Sender impl = new OpL2L2Sender();
-        bytes memory init = abi.encodeWithSelector(OpL2L2Sender.initialize.selector, admin, address(messenger), address(0x1), 123_456);
+        bytes memory init =
+            abi.encodeWithSelector(OpL2L2Sender.initialize.selector, admin, address(messenger), address(0x1), 123_456);
         sender = OpL2L2Sender(address(new ERC1967Proxy(address(impl), init)));
         AssetMapper mImpl = new AssetMapper();
-        mapper = AssetMapper(address(new ERC1967Proxy(address(mImpl), abi.encodeWithSelector(AssetMapper.initialize.selector, admin))));
+        mapper = AssetMapper(
+            address(new ERC1967Proxy(address(mImpl), abi.encodeWithSelector(AssetMapper.initialize.selector, admin)))
+        );
     }
 
     function testSetters() public {
@@ -97,10 +106,20 @@ contract OpL2L2SenderMoreTest is Test {
 
     function testOnlyAdminCannotSetters() public {
         address stranger = address(0xBAD);
-        vm.prank(stranger); vm.expectRevert(); sender.setMessenger(address(messenger));
-        vm.prank(stranger); vm.expectRevert(); sender.setMessengerToDefault();
-        vm.prank(stranger); vm.expectRevert(); sender.setRemoteReceiver(address(0x3));
-        vm.prank(stranger); vm.expectRevert(); sender.setAssetMapper(address(mapper));
-        vm.prank(stranger); vm.expectRevert(); sender.setMinGasLimit(1);
+        vm.prank(stranger);
+        vm.expectRevert();
+        sender.setMessenger(address(messenger));
+        vm.prank(stranger);
+        vm.expectRevert();
+        sender.setMessengerToDefault();
+        vm.prank(stranger);
+        vm.expectRevert();
+        sender.setRemoteReceiver(address(0x3));
+        vm.prank(stranger);
+        vm.expectRevert();
+        sender.setAssetMapper(address(mapper));
+        vm.prank(stranger);
+        vm.expectRevert();
+        sender.setMinGasLimit(1);
     }
 }

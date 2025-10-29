@@ -17,8 +17,8 @@ contract CollateralManagerMoreTest is Test {
         orac.initialize(address(this));
         spo.initialize(address(this), address(0), 300);
 
-        MockERC20 t1 = new MockERC20("A","A",6);
-        MockERC20 t2 = new MockERC20("B","B",18);
+        MockERC20 t1 = new MockERC20("A", "A", 6);
+        MockERC20 t2 = new MockERC20("B", "B", 18);
         orac.registerAdapter(address(t1), address(spo));
         orac.registerAdapter(address(t2), address(spo));
         cm.setAssetConfig(address(t1), true, 5000, address(orac), 6);

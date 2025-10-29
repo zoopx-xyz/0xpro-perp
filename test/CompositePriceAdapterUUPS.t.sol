@@ -18,7 +18,8 @@ contract CompositePriceAdapterUUPSTest is Test {
 
     function setUp() public {
         impl = new CompositePriceAdapter();
-        bytes memory init = abi.encodeWithSelector(CompositePriceAdapter.initialize.selector, address(this), address(0), address(0));
+        bytes memory init =
+            abi.encodeWithSelector(CompositePriceAdapter.initialize.selector, address(this), address(0), address(0));
         comp = CompositePriceAdapter(address(new ERC1967Proxy(address(impl), init)));
     }
 

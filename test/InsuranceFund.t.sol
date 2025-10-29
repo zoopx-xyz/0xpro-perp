@@ -15,8 +15,17 @@ contract InsuranceFundTest is Test {
     function setUp() public {
         asset = new MockERC20("USDC", "USDC", 6);
         asset.transferOwnership(admin);
-    InsuranceFund impl = new InsuranceFund();
-    fund = InsuranceFund(address(new ERC1967Proxy(address(impl), abi.encodeWithSelector(InsuranceFund.initialize.selector, admin, address(asset), "Insurance Fund", "iFUND"))));
+        InsuranceFund impl = new InsuranceFund();
+        fund = InsuranceFund(
+            address(
+                new ERC1967Proxy(
+                    address(impl),
+                    abi.encodeWithSelector(
+                        InsuranceFund.initialize.selector, admin, address(asset), "Insurance Fund", "iFUND"
+                    )
+                )
+            )
+        );
     }
 
     function testDepositAndWithdraw() public {
@@ -52,7 +61,7 @@ contract InsuranceFundTest is Test {
         fund.pause();
         vm.expectRevert();
         fund.mint(1, user);
-        
+
         fund.unpause();
         // test some successful operation that doesn't fail on balance
         assertEq(fund.decimals(), 6); // just exercise decimals() override
@@ -62,7 +71,7 @@ contract InsuranceFundTest is Test {
         // test asset() and totalSupply() getters
         assertEq(address(fund.asset()), address(asset));
         assertEq(fund.totalSupply(), 0);
-        
+
         // after deposit
         asset.mint(user, 1_000_000);
         vm.prank(user);

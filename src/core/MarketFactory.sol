@@ -18,9 +18,15 @@ contract MarketFactory is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     event MarketCreated(bytes32 indexed marketId, address base, uint8 baseDecimals, uint8 quoteDecimals);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
+    constructor() {
+        _disableInitializers();
+    }
 
-    function initialize(address admin) external initializer { __AccessControl_init(); __UUPSUpgradeable_init(); _grantRole(Constants.DEFAULT_ADMIN, admin); }
+    function initialize(address admin) external initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+        _grantRole(Constants.DEFAULT_ADMIN, admin);
+    }
 
     function _authorizeUpgrade(address) internal override onlyRole(Constants.DEFAULT_ADMIN) {}
 

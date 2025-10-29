@@ -16,11 +16,21 @@ contract MockPerpEngine {
     int256 public upnl;
     uint256 public mmr;
 
-    function setUPnL(int256 v) external { upnl = v; }
-    function setMMR(uint256 v) external { mmr = v; }
+    function setUPnL(int256 v) external {
+        upnl = v;
+    }
 
-    function getUnrealizedPnlZ(address) external view returns (int256) { return upnl; }
-    function computeAccountMMRZ(address) external view returns (uint256) { return mmr; }
+    function setMMR(uint256 v) external {
+        mmr = v;
+    }
+
+    function getUnrealizedPnlZ(address) external view returns (int256) {
+        return upnl;
+    }
+
+    function computeAccountMMRZ(address) external view returns (uint256) {
+        return mmr;
+    }
 }
 
 contract BridgeFlowTest is Test {
@@ -107,10 +117,10 @@ contract BridgeFlowTest is Test {
 
         // User initiates withdrawal
         bytes32 dstChain = keccak256("OP_TEST");
-    vm.prank(user);
-    // We don't know withdrawalId ahead of time; don't check the 3rd indexed topic (withdrawalId)
-    vm.expectEmit(true, true, false, true, address(adapter));
-    emit IBridgeAdapter.BridgeWithdrawalInitiated(user, address(usdc), amount, bytes32(0), dstChain);
+        vm.prank(user);
+        // We don't know withdrawalId ahead of time; don't check the 3rd indexed topic (withdrawalId)
+        vm.expectEmit(true, true, false, true, address(adapter));
+        emit IBridgeAdapter.BridgeWithdrawalInitiated(user, address(usdc), amount, bytes32(0), dstChain);
         bytes32 wid = adapter.initiateWithdrawal(address(usdc), amount, dstChain);
 
         // Balance reduced to zero
@@ -146,10 +156,10 @@ contract BridgeFlowTest is Test {
         usdc.approve(address(gateway), type(uint256).max);
 
         // Deposit emits event and holds funds
-    vm.prank(user);
-    // We don't know depositId ahead of time; don't check the 3rd indexed topic (depositId)
-    vm.expectEmit(true, true, false, true, address(gateway));
-    emit EscrowGateway.DepositEscrowed(user, address(usdc), 500_000, bytes32(0), keccak256("BASE"));
+        vm.prank(user);
+        // We don't know depositId ahead of time; don't check the 3rd indexed topic (depositId)
+        vm.expectEmit(true, true, false, true, address(gateway));
+        emit EscrowGateway.DepositEscrowed(user, address(usdc), 500_000, bytes32(0), keccak256("BASE"));
         gateway.deposit(address(usdc), 500_000, keccak256("BASE"));
         assertEq(usdc.balanceOf(address(gateway)), 500_000);
 
